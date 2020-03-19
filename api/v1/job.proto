@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package coolbeans.api.v1;
+
+enum JobStateProto {
+    INITIAL = 0;
+    READY = 1;
+    RESERVED = 2;
+    BURIED = 3;
+    DELAYED = 4;
+    DELETED = 5;
+}
+
+message JobProto {
+    // Unique identifier for job
+    int64 id = 1;
+
+    // Priority is an integer < 2**32. Jobs with smaller priority values will be
+    // scheduled before jobs with larger priorities. The most urgent priority is 0;
+    // the least urgent priority is 4,294,967,295.
+    uint32 priority = 2;
+
+    // delay is an integer number of seconds to wait before putting the job in
+    // the ready queue. The job will be in the "delayed" state during this time.
+    // Maximum delay is 2**32-1.
+    int64 delay = 3;
+
+    // TTR/time to run -- is an integer number of seconds to allow a worker
+    // to run this job. This time is counted from the moment a worker reserves
+    // this job. If the worker does not delete, release, or bury the job within
+    // <ttr> seconds, the job will time out and the server will release the job.
+    // The minimum ttr is 1. If the client sends 0, the server will silently
+    // increase the ttr to 1. Maximum ttr is 2**32-1.
+    int32 ttr = 4;
+
+    // tube_name is the name of the tube associated with this job
+    string tube_name = 5;
+
+    // created is the time in UTC the job is created
+    int64 created_at = 6;
+
+    // ready_at is the time in UTC the job is ready
+    int64 ready_at = 7;
+
+    // expires_at is the time in UTC, when current reservation expires
+    int64 expires_at = 8;
+
+    // state is the current state of this job
+    JobStateProto state = 9;
+
+    // reserved_by is the identifier of the client which has
+    // reserved this job, the value is empty if un-reserved
+    string reserved_by = 10;
+
+    // body_size is an integer indicating the size of the job body, not including the
+    // trailing "\r\n". This value must be less than max-job-size (default: 2**16)
+    int32 body_size = 11;
+
+    // body is the job body -- a sequence of bytes of length BodySize
+    bytes body = 12;
+}

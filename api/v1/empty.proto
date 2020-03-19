@@ -1,0 +1,5 @@
+syntax = "proto3";
+
+package coolbeans.api.v1;
+
+message Empty{}

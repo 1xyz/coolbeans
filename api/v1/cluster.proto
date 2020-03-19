@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package coolbeans.api.v1;
+
+import "empty.proto";
+
+service Cluster {
+    // Request to join this cluster
+    rpc Join (JoinRequest) returns (Empty) {}
+
+    // Query the cluster for the current leader info
+    rpc LeaderInfo (Empty) returns (LeaderInfoResponse) {}
+
+    // Returns updates to any leader changes
+    rpc LeaderUpdates(Empty) returns (stream LeaderInfoResponse) {}
+}
+
+message JoinRequest {
+    // Node ID of the node interested in joining
+    string node_id = 1;
+
+    // Address of the replica interested in joining
+    string addr = 2;
+}
+
+message LeaderInfoResponse {
+    // Node ID of the leader
+    string leader_node_id = 1;
+
+    // Address of the leader
+    string leader_addr = 2;
+}

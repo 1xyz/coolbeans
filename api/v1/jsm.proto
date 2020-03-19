@@ -1,0 +1,114 @@
+syntax = "proto3";
+
+package coolbeans.api.v1;
+
+import "job.proto";
+import "empty.proto";
+
+service JobStateMachine {
+    // Put creates a new job with the provided job parameters
+    //
+    // The response contains the identifier of the job created
+    rpc Put (PutRequest) returns (PutResponse) {}
+
+    // Delete a job with the provided job id
+    rpc Delete (DeleteRequest) returns (Empty) {}
+
+    // Reserve is a bi-directional streaming RPC
+    //
+    // Accepts a stream of reservation requests. Reservation are streamed
+    // as they are available.
+    rpc Reserve (stream ReserveRequest) returns (stream ReserveResponse) {}
+
+    // Release a reserved job back to either a Ready or a Delayed state
+    rpc Release (ReleaseRequest) returns (Empty) {}
+
+    // Extend a reserved job's reservation TTL by its TTR (time-to-run)
+    rpc Touch (TouchRequest) returns (Empty) {}
+
+    // Bury this job, if this job is in the reserved state
+    rpc Bury (BuryRequest) returns (Empty) {}
+
+    // Kick this job, if this job is in a buried stated to ready state
+    rpc Kick (KickRequest) returns (Empty) {}
+}
+
+message PutRequest {
+    // Refer Job.priority
+    uint32 priority = 1;
+
+    // Refer Job.delay
+    int64 delay = 2;
+
+    // Refer Job.ttr
+    int32 ttr = 3;
+
+    // Refer Job.tube_na,e
+    string tube_name = 4;
+
+    // Refer Job.body_size
+    int32 body_size = 5;
+
+    // Refer Job.body
+    bytes body = 6;
+}
+
+message PutResponse {
+    // The job identifier of the new job created
+    int64 job_id = 1;
+}
+
+message DeleteRequest {
+    // The job identifier of the job to be deleted
+    int64 job_id = 1;
+}
+
+message ReserveRequest {
+    // client id of the reservation
+    string client_id = 1;
+
+    // reservation timeout in seconds
+    int32 timeout_secs = 2;
+
+    // array of tubes to watch
+    repeated string tubes = 3;
+}
+
+message ReserveResponse {
+    // id of the client assigned to the reservation
+    string client_id = 1;
+
+    // if of the response
+    JobProto reserved_job = 2;
+}
+
+message ReleaseRequest {
+    // The job identifier of the job to be released
+    int64 job_id = 1;
+
+    // The identifier of the client asking for the release
+    int64 client_id = 2;
+
+    // A delay if set to a value > 0 marks the job as delayed
+    int32 delay = 3;
+}
+
+message TouchRequest {
+    // The job identifier of the job to be touched
+    int64 job_id = 1;
+}
+
+
+message BuryRequest {
+    // The job identifier of the job to be buried
+    int64 job_id = 1;
+}
+
+message KickRequest {
+    // The job identifier of the job to be Kicked
+    int64 job_id = 1;
+}
+
+
+
+
