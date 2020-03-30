@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package coolbeans.api.v1;
 
+import "client.proto";
 import "job.proto";
 import "empty.proto";
 
@@ -109,6 +110,15 @@ message KickRequest {
     int64 job_id = 1;
 }
 
+////////////////////////////////////////////////////////////////////////
 
+// Encapsulates a snap of the entire system
+message SnapshotProto {
+    // Array of all jobs currently in the system
+    repeated JobProto jobs = 1;
+
+    // Arrayy of all client reservation entries in the system
+    repeated ClientResvEntryProto reservations = 2;
+}
 
 

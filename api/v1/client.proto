@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package coolbeans.api.v1;
+
+message ClientResvEntryProto {
+    // identifier of the client that requested a reservation
+    string client_id = 1;
+
+    // reservation deadline at (clock time)
+    int64 resv_deadline_at = 2;
+
+    // boolean indicating if the client is waiting for a reservation
+    bool is_waiting_for_resv = 3;
+
+    // clock time at which the client needs some processing
+    int64 tick_at = 4;
+
+    // request id of the current reservation request
+    string req_id = 5;
+
+    // heap index value for this client reservation
+    int32 heap_index = 6;
+
+    // names of the tubes current watched for resrervations
+    repeated string watched_tube = 7;
+}
