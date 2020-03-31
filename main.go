@@ -3,11 +3,16 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	v1 "github.com/1xyz/coolbeans/api/v1"
+	"github.com/1xyz/coolbeans/server"
 	"github.com/1xyz/coolbeans/store"
 	"github.com/docopt/docopt-go"
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/net/context"
+	"google.golang.org/grpc"
 	"io"
 	"io/ioutil"
+	"net"
 	"os"
 	"time"
 )
@@ -181,7 +186,7 @@ func runCoolbeans(c *Config, nodeID string, joinID string) error {
 	}
 
 	enableSingle := false
-	if len(c.Nodes) == 1 {
+	if joinID == "" {
 		enableSingle = true
 	}
 
@@ -191,5 +196,49 @@ func runCoolbeans(c *Config, nodeID string, joinID string) error {
 		return err
 	}
 
+	if joinID != "" {
+		remoteNC, err := c.getNode(joinID)
+		if err != nil {
+			logc.Errorf("error getNode joinID=%v. err=%v", joinID, err)
+			return err
+		}
+
+		if err := joinNode(nc, remoteNC, time.Duration(c.Cluster.RaftTimeout)); err != nil {
+			return err
+		}
+	}
+
+	var opts []grpc.ServerOption
+	grpcServer := grpc.NewServer(opts...)
+	v1.RegisterClusterServer(grpcServer,
+		server.NewClusterServer(s))
+
+	logc.Infof("tcp server listen on %v", nc.ListenAddr)
+	lis, err := net.Listen("tcp", nc.ListenAddr)
+	if err != nil {
+		return fmt.Errorf("failed to listen: %v", err)
+	}
+
+	return grpcServer.Serve(lis)
+}
+
+func joinNode(LocalNC, remoteNC *NodeConfig, timeout time.Duration) error {
+	conn, err := grpc.Dial(remoteNC.ListenAddr, grpc.WithInsecure(), grpc.WithBlock())
+	if err != nil {
+		return fmt.Errorf("err grpc.Dial remote: %v. err: %v", remoteNC.ListenAddr, err)
+	}
+	defer conn.Close()
+
+	c := v1.NewClusterClient(conn)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	req := &v1.JoinRequest{
+		NodeId: LocalNC.ID,
+		Addr:   LocalNC.RaftAddr}
+	if _, err := c.Join(ctx, req); err != nil {
+		return err
+	}
+
+	log.Infof("Join completed successfully")
 	return nil
 }
