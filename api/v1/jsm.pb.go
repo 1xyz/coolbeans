@@ -24,6 +24,231 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
 
+type ReservationStatus int32
+
+const (
+	// Unknown ~~> UnknownRS (yuck!!)
+	// Note that enum values use C++ scoping rules, meaning
+	// that enum values are siblings of their type, not children of it.
+	// Therefore, "Unknown" must be unique within "coolbeans.api.v1",
+	// not just within "ResultCode"
+	ReservationStatus_UnknownRS    ReservationStatus = 0
+	ReservationStatus_Queued       ReservationStatus = 1
+	ReservationStatus_DeadlineSoon ReservationStatus = 2
+	ReservationStatus_Matched      ReservationStatus = 3
+	ReservationStatus_Timeout      ReservationStatus = 4
+	ReservationStatus_Error        ReservationStatus = 5
+)
+
+var ReservationStatus_name = map[int32]string{
+	0: "UnknownRS",
+	1: "Queued",
+	2: "DeadlineSoon",
+	3: "Matched",
+	4: "Timeout",
+	5: "Error",
+}
+
+var ReservationStatus_value = map[string]int32{
+	"UnknownRS":    0,
+	"Queued":       1,
+	"DeadlineSoon": 2,
+	"Matched":      3,
+	"Timeout":      4,
+	"Error":        5,
+}
+
+func (x ReservationStatus) String() string {
+	return proto.EnumName(ReservationStatus_name, int32(x))
+}
+
+func (ReservationStatus) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_cf6c16014e2432ed, []int{0}
+}
+
+type OpType int32
+
+const (
+	OpType_UNKNOWN OpType = 0
+	OpType_PUT     OpType = 1
+	OpType_RESERVE OpType = 2
+)
+
+var OpType_name = map[int32]string{
+	0: "UNKNOWN",
+	1: "PUT",
+	2: "RESERVE",
+}
+
+var OpType_value = map[string]int32{
+	"UNKNOWN": 0,
+	"PUT":     1,
+	"RESERVE": 2,
+}
+
+func (x OpType) String() string {
+	return proto.EnumName(OpType_name, int32(x))
+}
+
+func (OpType) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_cf6c16014e2432ed, []int{1}
+}
+
+// C & P from GRPC error codes
+// https://github.com/grpc/grpc-go/blob/master/codes/codes.go
+type ResultCode int32
+
+const (
+	// OK is returned on success.
+	ResultCode_OK ResultCode = 0
+	// Canceled indicates the operation was canceled (typically by the caller).
+	ResultCode_Canceled ResultCode = 1
+	// Unknown error. An example of where this error may be returned is
+	// if a Status value received from another address space belongs to
+	// an error-space that is not known in this address space. Also
+	// errors raised by APIs that do not return enough error information
+	// may be converted to this error.
+	ResultCode_Unknown ResultCode = 2
+	// InvalidArgument indicates client specified an invalid argument.
+	// Note that this differs from FailedPrecondition. It indicates arguments
+	// that are problematic regardless of the state of the system
+	// (e.g., a malformed file name).
+	ResultCode_InvalidArgument ResultCode = 3
+	// DeadlineExceeded means operation expired before completion.
+	// For operations that change the state of the system, this error may be
+	// returned even if the operation has completed successfully. For
+	// example, a successful response from a server could have been delayed
+	// long enough for the deadline to expire.
+	ResultCode_DeadlineExceeded ResultCode = 4
+	// NotFound means some requested entity (e.g., file or directory) was
+	// not found.
+	ResultCode_NotFound ResultCode = 5
+	// AlreadyExists means an attempt to create an entity failed because one
+	// already exists.
+	ResultCode_AlreadyExists ResultCode = 6
+	// PermissionDenied indicates the caller does not have permission to
+	// execute the specified operation. It must not be used for rejections
+	// caused by exhausting some resource (use ResourceExhausted
+	// instead for those errors). It must not be
+	// used if the caller cannot be identified (use Unauthenticated
+	// instead for those errors).
+	ResultCode_PermissionDenied ResultCode = 7
+	// ResourceExhausted indicates some resource has been exhausted, perhaps
+	// a per-user quota, or perhaps the entire file system is out of space.
+	ResultCode_ResourceExhausted ResultCode = 8
+	// FailedPrecondition indicates operation was rejected because the
+	// system is not in a state required for the operation's execution.
+	// For example, directory to be deleted may be non-empty, an rmdir
+	// operation is applied to a non-directory, etc.
+	//
+	// A litmus test that may help a service implementor in deciding
+	// between FailedPrecondition, Aborted, and Unavailable:
+	//  (a) Use Unavailable if the client can retry just the failing call.
+	//  (b) Use Aborted if the client should retry at a higher-level
+	//      (e.g., restarting a read-modify-write sequence).
+	//  (c) Use FailedPrecondition if the client should not retry until
+	//      the system state has been explicitly fixed. E.g., if an "rmdir"
+	//      fails because the directory is non-empty, FailedPrecondition
+	//      should be returned since the client should not retry unless
+	//      they have first fixed up the directory by deleting files from it.
+	//  (d) Use FailedPrecondition if the client performs conditional
+	//      REST Get/Update/Delete on a resource and the resource on the
+	//      server does not match the condition. E.g., conflicting
+	//      read-modify-write on the same resource.
+	ResultCode_FailedPrecondition ResultCode = 9
+	// Aborted indicates the operation was aborted, typically due to a
+	// concurrency issue like sequencer check failures, transaction aborts,
+	// etc.
+	//
+	// See litmus test above for deciding between FailedPrecondition,
+	// Aborted, and Unavailable.
+	ResultCode_Aborted ResultCode = 10
+	// OutOfRange means operation was attempted past the valid range.
+	// E.g., seeking or reading past end of file.
+	//
+	// Unlike InvalidArgument, this error indicates a problem that may
+	// be fixed if the system state changes. For example, a 32-bit file
+	// system will generate InvalidArgument if asked to read at an
+	// offset that is not in the range [0,2^32-1], but it will generate
+	// OutOfRange if asked to read from an offset past the current
+	// file size.
+	//
+	// There is a fair bit of overlap between FailedPrecondition and
+	// OutOfRange. We recommend using OutOfRange (the more specific
+	// error) when it applies so that callers who are iterating through
+	// a space can easily look for an OutOfRange error to detect when
+	// they are done.
+	ResultCode_OutOfRange ResultCode = 11
+	// Unimplemented indicates operation is not implemented or not
+	// supported/enabled in this service.
+	ResultCode_Unimplemented ResultCode = 12
+	// Internal errors. Means some invariants expected by underlying
+	// system has been broken. If you see one of these errors,
+	// something is very broken.
+	ResultCode_Internal ResultCode = 13
+	// Unavailable indicates the service is currently unavailable.
+	// This is a most likely a transient condition and may be corrected
+	// by retrying with a backoff. Note that it is not always safe to retry
+	// non-idempotent operations.
+	//
+	// See litmus test above for deciding between FailedPrecondition,
+	// Aborted, and Unavailable.
+	ResultCode_Unavailable ResultCode = 14
+	// DataLoss indicates unrecoverable data loss or corruption.
+	ResultCode_DataLoss ResultCode = 15
+	// Unauthenticated indicates the request does not have valid
+	// authentication credentials for the operation.
+	ResultCode_Unauthenticated ResultCode = 16
+)
+
+var ResultCode_name = map[int32]string{
+	0:  "OK",
+	1:  "Canceled",
+	2:  "Unknown",
+	3:  "InvalidArgument",
+	4:  "DeadlineExceeded",
+	5:  "NotFound",
+	6:  "AlreadyExists",
+	7:  "PermissionDenied",
+	8:  "ResourceExhausted",
+	9:  "FailedPrecondition",
+	10: "Aborted",
+	11: "OutOfRange",
+	12: "Unimplemented",
+	13: "Internal",
+	14: "Unavailable",
+	15: "DataLoss",
+	16: "Unauthenticated",
+}
+
+var ResultCode_value = map[string]int32{
+	"OK":                 0,
+	"Canceled":           1,
+	"Unknown":            2,
+	"InvalidArgument":    3,
+	"DeadlineExceeded":   4,
+	"NotFound":           5,
+	"AlreadyExists":      6,
+	"PermissionDenied":   7,
+	"ResourceExhausted":  8,
+	"FailedPrecondition": 9,
+	"Aborted":            10,
+	"OutOfRange":         11,
+	"Unimplemented":      12,
+	"Internal":           13,
+	"Unavailable":        14,
+	"DataLoss":           15,
+	"Unauthenticated":    16,
+}
+
+func (x ResultCode) String() string {
+	return proto.EnumName(ResultCode_name, int32(x))
+}
+
+func (ResultCode) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_cf6c16014e2432ed, []int{2}
+}
+
 type PutRequest struct {
 	// Refer Job.priority
 	Priority uint32 `protobuf:"varint,1,opt,name=priority,proto3" json:"priority,omitempty"`
@@ -192,10 +417,12 @@ func (m *DeleteRequest) GetJobId() int64 {
 type ReserveRequest struct {
 	// client id of the reservation
 	ClientId string `protobuf:"bytes,1,opt,name=client_id,json=clientId,proto3" json:"client_id,omitempty"`
+	// request id identify this reservation
+	RequestId string `protobuf:"bytes,2,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
 	// reservation timeout in seconds
-	TimeoutSecs int32 `protobuf:"varint,2,opt,name=timeout_secs,json=timeoutSecs,proto3" json:"timeout_secs,omitempty"`
+	TimeoutSecs int32 `protobuf:"varint,3,opt,name=timeout_secs,json=timeoutSecs,proto3" json:"timeout_secs,omitempty"`
 	// array of tubes to watch
-	Tubes                []string `protobuf:"bytes,3,rep,name=tubes,proto3" json:"tubes,omitempty"`
+	WatchedTubes         []string `protobuf:"bytes,4,rep,name=watched_tubes,json=watchedTubes,proto3" json:"watched_tubes,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -233,6 +460,13 @@ func (m *ReserveRequest) GetClientId() string {
 	return ""
 }
 
+func (m *ReserveRequest) GetRequestId() string {
+	if m != nil {
+		return m.RequestId
+	}
+	return ""
+}
+
 func (m *ReserveRequest) GetTimeoutSecs() int32 {
 	if m != nil {
 		return m.TimeoutSecs
@@ -240,21 +474,19 @@ func (m *ReserveRequest) GetTimeoutSecs() int32 {
 	return 0
 }
 
-func (m *ReserveRequest) GetTubes() []string {
+func (m *ReserveRequest) GetWatchedTubes() []string {
 	if m != nil {
-		return m.Tubes
+		return m.WatchedTubes
 	}
 	return nil
 }
 
 type ReserveResponse struct {
-	// id of the client assigned to the reservation
-	ClientId string `protobuf:"bytes,1,opt,name=client_id,json=clientId,proto3" json:"client_id,omitempty"`
-	// if of the response
-	ReservedJob          *JobProto `protobuf:"bytes,2,opt,name=reserved_job,json=reservedJob,proto3" json:"reserved_job,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}  `json:"-"`
-	XXX_unrecognized     []byte    `json:"-"`
-	XXX_sizecache        int32     `json:"-"`
+	// Reservation object encapsulated in this response
+	Reservation          *Reservation `protobuf:"bytes,1,opt,name=reservation,proto3" json:"reservation,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}     `json:"-"`
+	XXX_unrecognized     []byte       `json:"-"`
+	XXX_sizecache        int32        `json:"-"`
 }
 
 func (m *ReserveResponse) Reset()         { *m = ReserveResponse{} }
@@ -282,18 +514,105 @@ func (m *ReserveResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_ReserveResponse proto.InternalMessageInfo
 
-func (m *ReserveResponse) GetClientId() string {
+func (m *ReserveResponse) GetReservation() *Reservation {
+	if m != nil {
+		return m.Reservation
+	}
+	return nil
+}
+
+type Reservation struct {
+	// request_id associated with this reservation
+	RequestId string `protobuf:"bytes,1,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	// client id assinged to this reservation
+	ClientId string `protobuf:"bytes,2,opt,name=client_id,json=clientId,proto3" json:"client_id,omitempty"`
+	// Result of this reservation
+	Status ReservationStatus `protobuf:"varint,3,opt,name=Status,proto3,enum=coolbeans.api.v1.ReservationStatus" json:"Status,omitempty"`
+	// job id (assigned) if Status is matched
+	JobId int64 `protobuf:"varint,4,opt,name=job_id,json=jobId,proto3" json:"job_id,omitempty"`
+	// job body size (assigned) if Status is matched
+	BodySize int32 `protobuf:"varint,5,opt,name=body_size,json=bodySize,proto3" json:"body_size,omitempty"`
+	// job body  (assigned) if Status is matched
+	Body []byte `protobuf:"bytes,6,opt,name=body,proto3" json:"body,omitempty"`
+	// error message (assigned) if Status is error
+	ErrorMsg             string   `protobuf:"bytes,7,opt,name=error_msg,json=errorMsg,proto3" json:"error_msg,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *Reservation) Reset()         { *m = Reservation{} }
+func (m *Reservation) String() string { return proto.CompactTextString(m) }
+func (*Reservation) ProtoMessage()    {}
+func (*Reservation) Descriptor() ([]byte, []int) {
+	return fileDescriptor_cf6c16014e2432ed, []int{5}
+}
+
+func (m *Reservation) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Reservation.Unmarshal(m, b)
+}
+func (m *Reservation) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Reservation.Marshal(b, m, deterministic)
+}
+func (m *Reservation) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Reservation.Merge(m, src)
+}
+func (m *Reservation) XXX_Size() int {
+	return xxx_messageInfo_Reservation.Size(m)
+}
+func (m *Reservation) XXX_DiscardUnknown() {
+	xxx_messageInfo_Reservation.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Reservation proto.InternalMessageInfo
+
+func (m *Reservation) GetRequestId() string {
+	if m != nil {
+		return m.RequestId
+	}
+	return ""
+}
+
+func (m *Reservation) GetClientId() string {
 	if m != nil {
 		return m.ClientId
 	}
 	return ""
 }
 
-func (m *ReserveResponse) GetReservedJob() *JobProto {
+func (m *Reservation) GetStatus() ReservationStatus {
 	if m != nil {
-		return m.ReservedJob
+		return m.Status
+	}
+	return ReservationStatus_UnknownRS
+}
+
+func (m *Reservation) GetJobId() int64 {
+	if m != nil {
+		return m.JobId
+	}
+	return 0
+}
+
+func (m *Reservation) GetBodySize() int32 {
+	if m != nil {
+		return m.BodySize
+	}
+	return 0
+}
+
+func (m *Reservation) GetBody() []byte {
+	if m != nil {
+		return m.Body
 	}
 	return nil
+}
+
+func (m *Reservation) GetErrorMsg() string {
+	if m != nil {
+		return m.ErrorMsg
+	}
+	return ""
 }
 
 type ReleaseRequest struct {
@@ -312,7 +631,7 @@ func (m *ReleaseRequest) Reset()         { *m = ReleaseRequest{} }
 func (m *ReleaseRequest) String() string { return proto.CompactTextString(m) }
 func (*ReleaseRequest) ProtoMessage()    {}
 func (*ReleaseRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_cf6c16014e2432ed, []int{5}
+	return fileDescriptor_cf6c16014e2432ed, []int{6}
 }
 
 func (m *ReleaseRequest) XXX_Unmarshal(b []byte) error {
@@ -366,7 +685,7 @@ func (m *TouchRequest) Reset()         { *m = TouchRequest{} }
 func (m *TouchRequest) String() string { return proto.CompactTextString(m) }
 func (*TouchRequest) ProtoMessage()    {}
 func (*TouchRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_cf6c16014e2432ed, []int{6}
+	return fileDescriptor_cf6c16014e2432ed, []int{7}
 }
 
 func (m *TouchRequest) XXX_Unmarshal(b []byte) error {
@@ -406,7 +725,7 @@ func (m *BuryRequest) Reset()         { *m = BuryRequest{} }
 func (m *BuryRequest) String() string { return proto.CompactTextString(m) }
 func (*BuryRequest) ProtoMessage()    {}
 func (*BuryRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_cf6c16014e2432ed, []int{7}
+	return fileDescriptor_cf6c16014e2432ed, []int{8}
 }
 
 func (m *BuryRequest) XXX_Unmarshal(b []byte) error {
@@ -446,7 +765,7 @@ func (m *KickRequest) Reset()         { *m = KickRequest{} }
 func (m *KickRequest) String() string { return proto.CompactTextString(m) }
 func (*KickRequest) ProtoMessage()    {}
 func (*KickRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_cf6c16014e2432ed, []int{8}
+	return fileDescriptor_cf6c16014e2432ed, []int{9}
 }
 
 func (m *KickRequest) XXX_Unmarshal(b []byte) error {
@@ -489,7 +808,7 @@ func (m *SnapshotProto) Reset()         { *m = SnapshotProto{} }
 func (m *SnapshotProto) String() string { return proto.CompactTextString(m) }
 func (*SnapshotProto) ProtoMessage()    {}
 func (*SnapshotProto) Descriptor() ([]byte, []int) {
-	return fileDescriptor_cf6c16014e2432ed, []int{9}
+	return fileDescriptor_cf6c16014e2432ed, []int{10}
 }
 
 func (m *SnapshotProto) XXX_Unmarshal(b []byte) error {
@@ -524,17 +843,139 @@ func (m *SnapshotProto) GetReservations() []*ClientResvEntryProto {
 	return nil
 }
 
+type ApplyOpRequest struct {
+	// Indicates the type of operation
+	Op OpType `protobuf:"varint,1,opt,name=op,proto3,enum=coolbeans.api.v1.OpType" json:"op,omitempty"`
+	// time in seconds from epoch this request is made
+	NowSecs int64 `protobuf:"varint,2,opt,name=now_secs,json=nowSecs,proto3" json:"now_secs,omitempty"`
+	// The operation request body
+	Body                 []byte   `protobuf:"bytes,3,opt,name=body,proto3" json:"body,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *ApplyOpRequest) Reset()         { *m = ApplyOpRequest{} }
+func (m *ApplyOpRequest) String() string { return proto.CompactTextString(m) }
+func (*ApplyOpRequest) ProtoMessage()    {}
+func (*ApplyOpRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_cf6c16014e2432ed, []int{11}
+}
+
+func (m *ApplyOpRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ApplyOpRequest.Unmarshal(m, b)
+}
+func (m *ApplyOpRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ApplyOpRequest.Marshal(b, m, deterministic)
+}
+func (m *ApplyOpRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ApplyOpRequest.Merge(m, src)
+}
+func (m *ApplyOpRequest) XXX_Size() int {
+	return xxx_messageInfo_ApplyOpRequest.Size(m)
+}
+func (m *ApplyOpRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_ApplyOpRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ApplyOpRequest proto.InternalMessageInfo
+
+func (m *ApplyOpRequest) GetOp() OpType {
+	if m != nil {
+		return m.Op
+	}
+	return OpType_UNKNOWN
+}
+
+func (m *ApplyOpRequest) GetNowSecs() int64 {
+	if m != nil {
+		return m.NowSecs
+	}
+	return 0
+}
+
+func (m *ApplyOpRequest) GetBody() []byte {
+	if m != nil {
+		return m.Body
+	}
+	return nil
+}
+
+type ApplyOpResponse struct {
+	// error code
+	ErrorCode ResultCode `protobuf:"varint,1,opt,name=error_code,json=errorCode,proto3,enum=coolbeans.api.v1.ResultCode" json:"error_code,omitempty"`
+	// error message (typically set if error_code > 0
+	ErrorMessage string `protobuf:"bytes,2,opt,name=error_message,json=errorMessage,proto3" json:"error_message,omitempty"`
+	// The response body
+	Body                 []byte   `protobuf:"bytes,3,opt,name=body,proto3" json:"body,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *ApplyOpResponse) Reset()         { *m = ApplyOpResponse{} }
+func (m *ApplyOpResponse) String() string { return proto.CompactTextString(m) }
+func (*ApplyOpResponse) ProtoMessage()    {}
+func (*ApplyOpResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_cf6c16014e2432ed, []int{12}
+}
+
+func (m *ApplyOpResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ApplyOpResponse.Unmarshal(m, b)
+}
+func (m *ApplyOpResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ApplyOpResponse.Marshal(b, m, deterministic)
+}
+func (m *ApplyOpResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ApplyOpResponse.Merge(m, src)
+}
+func (m *ApplyOpResponse) XXX_Size() int {
+	return xxx_messageInfo_ApplyOpResponse.Size(m)
+}
+func (m *ApplyOpResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_ApplyOpResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ApplyOpResponse proto.InternalMessageInfo
+
+func (m *ApplyOpResponse) GetErrorCode() ResultCode {
+	if m != nil {
+		return m.ErrorCode
+	}
+	return ResultCode_OK
+}
+
+func (m *ApplyOpResponse) GetErrorMessage() string {
+	if m != nil {
+		return m.ErrorMessage
+	}
+	return ""
+}
+
+func (m *ApplyOpResponse) GetBody() []byte {
+	if m != nil {
+		return m.Body
+	}
+	return nil
+}
+
 func init() {
+	proto.RegisterEnum("coolbeans.api.v1.ReservationStatus", ReservationStatus_name, ReservationStatus_value)
+	proto.RegisterEnum("coolbeans.api.v1.OpType", OpType_name, OpType_value)
+	proto.RegisterEnum("coolbeans.api.v1.ResultCode", ResultCode_name, ResultCode_value)
 	proto.RegisterType((*PutRequest)(nil), "coolbeans.api.v1.PutRequest")
 	proto.RegisterType((*PutResponse)(nil), "coolbeans.api.v1.PutResponse")
 	proto.RegisterType((*DeleteRequest)(nil), "coolbeans.api.v1.DeleteRequest")
 	proto.RegisterType((*ReserveRequest)(nil), "coolbeans.api.v1.ReserveRequest")
 	proto.RegisterType((*ReserveResponse)(nil), "coolbeans.api.v1.ReserveResponse")
+	proto.RegisterType((*Reservation)(nil), "coolbeans.api.v1.Reservation")
 	proto.RegisterType((*ReleaseRequest)(nil), "coolbeans.api.v1.ReleaseRequest")
 	proto.RegisterType((*TouchRequest)(nil), "coolbeans.api.v1.TouchRequest")
 	proto.RegisterType((*BuryRequest)(nil), "coolbeans.api.v1.BuryRequest")
 	proto.RegisterType((*KickRequest)(nil), "coolbeans.api.v1.KickRequest")
 	proto.RegisterType((*SnapshotProto)(nil), "coolbeans.api.v1.SnapshotProto")
+	proto.RegisterType((*ApplyOpRequest)(nil), "coolbeans.api.v1.ApplyOpRequest")
+	proto.RegisterType((*ApplyOpResponse)(nil), "coolbeans.api.v1.ApplyOpResponse")
 }
 
 func init() {
@@ -542,43 +983,74 @@ func init() {
 }
 
 var fileDescriptor_cf6c16014e2432ed = []byte{
-	// 574 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x84, 0x54, 0x4d, 0x6f, 0xd3, 0x40,
-	0x10, 0xad, 0x71, 0x12, 0xe2, 0x49, 0x4a, 0xab, 0x15, 0x08, 0xcb, 0xe5, 0xc3, 0xb5, 0x4a, 0xe5,
-	0x53, 0x04, 0xe5, 0x8c, 0x84, 0x4a, 0x8b, 0xd4, 0x20, 0x50, 0xb5, 0xe9, 0x89, 0x4b, 0xe4, 0x75,
-	0x06, 0xd5, 0x26, 0xf6, 0x1a, 0xef, 0xba, 0x92, 0x7b, 0xe5, 0xc8, 0x7f, 0xe0, 0xb7, 0xa2, 0xdd,
-	0x4d, 0xd2, 0x04, 0xb7, 0xf1, 0x6d, 0x67, 0xf6, 0xcd, 0xdb, 0x79, 0x33, 0xcf, 0x06, 0x27, 0x15,
-	0xd9, 0xa8, 0x28, 0xb9, 0xe4, 0x64, 0x3f, 0xe6, 0x7c, 0xce, 0x30, 0xca, 0xc5, 0x28, 0x2a, 0x92,
-	0xd1, 0xcd, 0x3b, 0x6f, 0x18, 0xcf, 0x13, 0xcc, 0xa5, 0xb9, 0xf7, 0x9c, 0x94, 0xb3, 0xc5, 0x71,
-	0x80, 0x59, 0x21, 0x6b, 0x13, 0x04, 0x7f, 0x2d, 0x80, 0xcb, 0x4a, 0x52, 0xfc, 0x55, 0xa1, 0x90,
-	0xc4, 0x83, 0x7e, 0x51, 0x26, 0xbc, 0x4c, 0x64, 0xed, 0x5a, 0xbe, 0x15, 0xee, 0xd2, 0x55, 0x4c,
-	0x9e, 0x42, 0x77, 0x86, 0xf3, 0xa8, 0x76, 0x1f, 0xf9, 0x56, 0x68, 0x53, 0x13, 0x90, 0x7d, 0xb0,
-	0xa5, 0x2c, 0x5d, 0xdb, 0xb7, 0xc2, 0x2e, 0x55, 0x47, 0x72, 0x00, 0x8e, 0xac, 0x18, 0x4e, 0xf3,
-	0x28, 0x43, 0xb7, 0xe3, 0x5b, 0xa1, 0x43, 0xfb, 0x2a, 0xf1, 0x2d, 0xca, 0x50, 0x5d, 0x32, 0x3e,
-	0xab, 0xa7, 0x22, 0xb9, 0x45, 0xb7, 0xab, 0x8b, 0xfa, 0x2a, 0x31, 0x49, 0x6e, 0x91, 0x10, 0xe8,
-	0xa8, 0xb3, 0xdb, 0xf3, 0xad, 0x70, 0x48, 0xf5, 0x39, 0x38, 0x82, 0x81, 0xee, 0x4f, 0x14, 0x3c,
-	0x17, 0x48, 0x9e, 0x41, 0x2f, 0xe5, 0x6c, 0x9a, 0xcc, 0x74, 0x7b, 0x36, 0xed, 0xa6, 0x9c, 0x5d,
-	0xcc, 0x82, 0x63, 0xd8, 0x3d, 0xc3, 0x39, 0x4a, 0x5c, 0x0a, 0x79, 0x00, 0xf7, 0x03, 0x9e, 0x50,
-	0x14, 0x58, 0xde, 0xac, 0x80, 0x07, 0xe0, 0x98, 0x41, 0x2d, 0xb1, 0x0e, 0xed, 0x9b, 0xc4, 0xc5,
-	0x8c, 0x1c, 0xc2, 0x50, 0x26, 0x19, 0xf2, 0x4a, 0x4e, 0x05, 0xc6, 0x42, 0x2b, 0xef, 0xd2, 0xc1,
-	0x22, 0x37, 0xc1, 0x58, 0xa8, 0xa9, 0x28, 0x71, 0xc2, 0xb5, 0x7d, 0x3b, 0x74, 0xa8, 0x09, 0x82,
-	0x0c, 0xf6, 0x56, 0xef, 0x2c, 0x3a, 0xdf, 0xfa, 0xd0, 0x07, 0x18, 0x96, 0x06, 0x3f, 0x9b, 0xa6,
-	0x9c, 0xe9, 0x87, 0x06, 0x27, 0xde, 0xe8, 0xff, 0xad, 0x8e, 0xc6, 0x9c, 0x5d, 0xaa, 0xc5, 0xd1,
-	0xc1, 0x12, 0x3f, 0xe6, 0x2c, 0xf8, 0xae, 0x64, 0xcd, 0x31, 0x12, 0x2d, 0xfa, 0x37, 0x9b, 0x30,
-	0x7b, 0xbc, 0x6b, 0x62, 0xb5, 0x60, 0xb3, 0x4c, 0x13, 0x04, 0x6f, 0x60, 0x78, 0xc5, 0xab, 0xf8,
-	0xba, 0x65, 0xb2, 0x47, 0x30, 0x38, 0xad, 0xca, 0xba, 0x1d, 0xf5, 0x25, 0x89, 0x7f, 0xb6, 0xa0,
-	0xfe, 0x58, 0xb0, 0x3b, 0xc9, 0xa3, 0x42, 0x5c, 0x73, 0xa9, 0xd5, 0x92, 0x11, 0x74, 0x52, 0xce,
-	0x84, 0x6b, 0xf9, 0x76, 0xcb, 0x5c, 0x34, 0x8e, 0x8c, 0x97, 0xf3, 0x8c, 0x64, 0xc2, 0x73, 0xb5,
-	0x38, 0x55, 0x77, 0xdc, 0xac, 0xfb, 0xa4, 0xc5, 0x53, 0x14, 0x37, 0xe7, 0xb9, 0x2c, 0x6b, 0xc3,
-	0xb1, 0x51, 0x7b, 0xf2, 0xbb, 0x03, 0x7b, 0x63, 0xce, 0x26, 0x32, 0x92, 0xf8, 0x35, 0x8a, 0xaf,
-	0x93, 0x1c, 0xc9, 0x19, 0xd8, 0x97, 0x95, 0x24, 0x2f, 0x9a, 0x84, 0x77, 0x1f, 0x93, 0xf7, 0xf2,
-	0x81, 0x5b, 0x63, 0x88, 0x60, 0x87, 0x9c, 0x41, 0xcf, 0xb8, 0x96, 0xbc, 0x6e, 0x42, 0x37, 0xfc,
-	0xec, 0x3d, 0x6f, 0x02, 0xce, 0xd5, 0x67, 0x1c, 0xec, 0x90, 0x2b, 0x78, 0xbc, 0xf0, 0x1a, 0xf1,
-	0x9b, 0xa8, 0x4d, 0xbb, 0x7b, 0x87, 0x5b, 0x10, 0xcb, 0xbe, 0x42, 0xeb, 0xad, 0x45, 0x3e, 0x2b,
-	0x56, 0x6d, 0xa9, 0xfb, 0x59, 0xd7, 0xdd, 0xb6, 0xad, 0xbb, 0x53, 0xe8, 0x6a, 0xfb, 0x90, 0x57,
-	0x4d, 0xcc, 0xba, 0xaf, 0xb6, 0x71, 0x7c, 0x84, 0x8e, 0xf2, 0x16, 0xb9, 0x67, 0xa0, 0x6b, 0x9e,
-	0x6b, 0x61, 0x50, 0xbe, 0xbb, 0x8f, 0x61, 0xcd, 0x8f, 0x5b, 0x18, 0x58, 0x4f, 0xff, 0x2f, 0xdf,
-	0xff, 0x0b, 0x00, 0x00, 0xff, 0xff, 0xd6, 0x62, 0xca, 0xed, 0x74, 0x05, 0x00, 0x00,
+	// 1063 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x94, 0x56, 0xdd, 0x72, 0xdb, 0xc4,
+	0x17, 0x8f, 0x2c, 0x7f, 0x1e, 0x7f, 0x6d, 0xf7, 0xdf, 0xfe, 0x31, 0x2e, 0x05, 0xd7, 0x2d, 0x1d,
+	0x4f, 0x99, 0xf1, 0x0c, 0xe1, 0xb2, 0x17, 0x90, 0xd6, 0xee, 0x4c, 0x12, 0x12, 0x1b, 0x39, 0x86,
+	0x19, 0x6e, 0x3c, 0x2b, 0xe9, 0x10, 0x2b, 0x95, 0x77, 0x85, 0x76, 0x95, 0xc4, 0x7d, 0x01, 0x2e,
+	0xb8, 0xe5, 0x9a, 0x87, 0xe0, 0xb5, 0x78, 0x08, 0x98, 0xd5, 0x2a, 0x8e, 0x13, 0x3b, 0xc9, 0x70,
+	0xb7, 0x7b, 0xce, 0xef, 0x1c, 0xfd, 0xce, 0xe7, 0x0a, 0x2a, 0x67, 0x72, 0xd1, 0x8f, 0x62, 0xa1,
+	0x04, 0x25, 0x9e, 0x10, 0xa1, 0x8b, 0x8c, 0xcb, 0x3e, 0x8b, 0x82, 0xfe, 0xf9, 0xd7, 0xed, 0x9a,
+	0x17, 0x06, 0xc8, 0x95, 0xd1, 0xb7, 0x2b, 0x67, 0xc2, 0xcd, 0x8e, 0x55, 0x5c, 0x44, 0x6a, 0x69,
+	0x2e, 0xdd, 0x3f, 0x2d, 0x80, 0x71, 0xa2, 0x1c, 0xfc, 0x35, 0x41, 0xa9, 0x68, 0x1b, 0xca, 0x51,
+	0x1c, 0x88, 0x38, 0x50, 0xcb, 0x96, 0xd5, 0xb1, 0x7a, 0x75, 0x67, 0x75, 0xa7, 0x8f, 0xa1, 0xe0,
+	0x63, 0xc8, 0x96, 0xad, 0x5c, 0xc7, 0xea, 0xd9, 0x8e, 0xb9, 0x50, 0x02, 0xb6, 0x52, 0x71, 0xcb,
+	0xee, 0x58, 0xbd, 0x82, 0xa3, 0x8f, 0xf4, 0x29, 0x54, 0x54, 0xe2, 0xe2, 0x8c, 0xb3, 0x05, 0xb6,
+	0xf2, 0x1d, 0xab, 0x57, 0x71, 0xca, 0x5a, 0x70, 0xcc, 0x16, 0xa8, 0x95, 0xae, 0xf0, 0x97, 0x33,
+	0x19, 0x7c, 0xc4, 0x56, 0x21, 0x35, 0x2a, 0x6b, 0xc1, 0x24, 0xf8, 0x88, 0x94, 0x42, 0x5e, 0x9f,
+	0x5b, 0xc5, 0x8e, 0xd5, 0xab, 0x39, 0xe9, 0xb9, 0xfb, 0x12, 0xaa, 0x29, 0x3f, 0x19, 0x09, 0x2e,
+	0x91, 0x3e, 0x81, 0xe2, 0x99, 0x70, 0x67, 0x81, 0x9f, 0xd2, 0xb3, 0x9d, 0xc2, 0x99, 0x70, 0xf7,
+	0xfd, 0xee, 0x2b, 0xa8, 0x0f, 0x30, 0x44, 0x85, 0x57, 0x81, 0xdc, 0x81, 0xfb, 0xc3, 0x82, 0x86,
+	0x83, 0x12, 0xe3, 0xf3, 0x15, 0xf2, 0x29, 0x54, 0x4c, 0xa6, 0xae, 0xc0, 0x15, 0xa7, 0x6c, 0x04,
+	0xfb, 0x3e, 0x7d, 0x06, 0x10, 0x1b, 0x9c, 0xd6, 0xe6, 0x52, 0x6d, 0x25, 0x93, 0xec, 0xfb, 0xf4,
+	0x39, 0xd4, 0x54, 0xb0, 0x40, 0x91, 0xa8, 0x99, 0x44, 0x4f, 0x66, 0x59, 0xa8, 0x66, 0xb2, 0x09,
+	0x7a, 0x92, 0xbe, 0x80, 0xfa, 0x05, 0x53, 0xde, 0x1c, 0xfd, 0x99, 0x4e, 0x82, 0x6c, 0xe5, 0x3b,
+	0x76, 0xaf, 0xe2, 0xd4, 0x32, 0xe1, 0x89, 0x96, 0x75, 0x1d, 0x68, 0xae, 0x58, 0x65, 0x81, 0x7e,
+	0x0b, 0xd5, 0x38, 0x15, 0x31, 0x15, 0x08, 0x9e, 0x12, 0xab, 0xee, 0x3e, 0xeb, 0xdf, 0x2e, 0x73,
+	0xdf, 0xb9, 0x06, 0x39, 0xeb, 0x16, 0xdd, 0xbf, 0x2d, 0xa8, 0xae, 0x29, 0x6f, 0x85, 0x62, 0xdd,
+	0x0e, 0xe5, 0x46, 0x1a, 0x72, 0xb7, 0xd2, 0xf0, 0x06, 0x8a, 0x13, 0xc5, 0x54, 0x62, 0x22, 0x6c,
+	0xec, 0xbe, 0xb8, 0x97, 0x87, 0x81, 0x3a, 0x99, 0xc9, 0x5a, 0x29, 0xf2, 0x6b, 0xa5, 0xf8, 0xcf,
+	0x9d, 0xa0, 0x0d, 0x30, 0x8e, 0x45, 0x3c, 0x5b, 0xc8, 0xd3, 0x56, 0xc9, 0x30, 0x4c, 0x05, 0x47,
+	0xf2, 0xb4, 0xfb, 0xb3, 0xae, 0x6b, 0x88, 0x4c, 0x3e, 0xd0, 0x01, 0x9b, 0x71, 0xda, 0x6b, 0x71,
+	0xae, 0x5a, 0xdc, 0x14, 0xd2, 0x5c, 0xba, 0x5f, 0x42, 0xed, 0x44, 0x24, 0xde, 0xfc, 0x81, 0xde,
+	0x7a, 0x09, 0xd5, 0xb7, 0x49, 0xbc, 0x7c, 0x18, 0x75, 0x18, 0x78, 0x1f, 0x1e, 0x40, 0xfd, 0x6e,
+	0x41, 0x7d, 0xc2, 0x59, 0x24, 0xe7, 0x42, 0x8d, 0xd3, 0x01, 0xef, 0x43, 0xfe, 0x4c, 0xb8, 0xb2,
+	0x65, 0x75, 0xec, 0x5e, 0x75, 0xb7, 0xbd, 0x59, 0x80, 0x03, 0xe1, 0xa6, 0x48, 0x27, 0xc5, 0xd1,
+	0x03, 0xa8, 0xad, 0x75, 0x83, 0x6c, 0xe5, 0x52, 0xbb, 0x57, 0x9b, 0x76, 0xef, 0xd2, 0xe0, 0x1d,
+	0x94, 0xe7, 0x43, 0xae, 0xe2, 0xa5, 0xf1, 0x71, 0xc3, 0xb6, 0x1b, 0x40, 0x63, 0x2f, 0x8a, 0xc2,
+	0xe5, 0x28, 0xba, 0xa2, 0xdd, 0x83, 0x9c, 0x88, 0x52, 0xca, 0x8d, 0xdd, 0xd6, 0xa6, 0xcf, 0x51,
+	0x74, 0xb2, 0x8c, 0xd0, 0xc9, 0x89, 0x88, 0x7e, 0x0a, 0x65, 0x2e, 0x2e, 0xcc, 0x78, 0x98, 0x74,
+	0x97, 0xb8, 0xb8, 0x48, 0x47, 0xe3, 0xaa, 0xc8, 0xf6, 0xda, 0xb8, 0xff, 0x66, 0x41, 0x73, 0xf5,
+	0xad, 0x6c, 0x14, 0xde, 0x00, 0x98, 0xc2, 0x7b, 0xc2, 0xc7, 0xec, 0xa3, 0x9f, 0x6d, 0xed, 0xc0,
+	0x24, 0x54, 0xef, 0x84, 0x8f, 0x8e, 0x69, 0x14, 0x7d, 0xd4, 0xf3, 0x97, 0x75, 0x0d, 0x4a, 0xc9,
+	0x4e, 0x31, 0xeb, 0xed, 0x9a, 0xe9, 0x1c, 0x23, 0xdb, 0xc6, 0xe4, 0x35, 0xc2, 0xa3, 0x8d, 0x9e,
+	0xa6, 0x75, 0xa8, 0x4c, 0xf9, 0x07, 0x2e, 0x2e, 0xb8, 0x33, 0x21, 0x3b, 0x14, 0xa0, 0xf8, 0x43,
+	0x82, 0x09, 0xfa, 0xc4, 0xa2, 0x04, 0x6a, 0x03, 0x64, 0x7e, 0x18, 0x70, 0x9c, 0x08, 0xc1, 0x49,
+	0x8e, 0x56, 0xa1, 0x74, 0x64, 0xa6, 0x9c, 0xd8, 0xfa, 0x72, 0x62, 0xd6, 0x02, 0xc9, 0xd3, 0x0a,
+	0x14, 0x86, 0xfa, 0xfb, 0xa4, 0xf0, 0xfa, 0x2b, 0x28, 0x9a, 0x6c, 0x69, 0xc4, 0xf4, 0xf8, 0xf0,
+	0x78, 0xf4, 0xd3, 0x31, 0xd9, 0xa1, 0x25, 0xb0, 0xc7, 0xd3, 0x13, 0x62, 0x69, 0xa9, 0x33, 0x9c,
+	0x0c, 0x9d, 0x1f, 0x87, 0x24, 0xf7, 0xfa, 0xaf, 0x1c, 0xc0, 0x75, 0x98, 0xb4, 0x08, 0xb9, 0xd1,
+	0x21, 0xd9, 0xa1, 0x35, 0x28, 0xbf, 0x63, 0xdc, 0xc3, 0x30, 0x25, 0xa2, 0xfd, 0x18, 0x8e, 0x24,
+	0x47, 0xff, 0x07, 0xcd, 0x7d, 0x7e, 0xce, 0xc2, 0xc0, 0xdf, 0x8b, 0x4f, 0x93, 0x05, 0x72, 0x45,
+	0x6c, 0xfa, 0x18, 0xc8, 0x15, 0xd5, 0xe1, 0xa5, 0x87, 0xe8, 0xa3, 0x4f, 0xf2, 0xda, 0xcb, 0xb1,
+	0x50, 0xef, 0x45, 0xc2, 0x7d, 0x52, 0xa0, 0x8f, 0xa0, 0xbe, 0x17, 0xc6, 0xc8, 0xfc, 0xe5, 0xf0,
+	0x32, 0x90, 0x4a, 0x92, 0xa2, 0x36, 0x1b, 0x63, 0xbc, 0x08, 0xa4, 0x0c, 0x04, 0x1f, 0x20, 0x0f,
+	0xd0, 0x27, 0x25, 0xfa, 0x24, 0xcd, 0x93, 0x48, 0x62, 0x0f, 0x87, 0x97, 0x73, 0x96, 0x48, 0x85,
+	0x3e, 0x29, 0xd3, 0xff, 0x03, 0x7d, 0xcf, 0x82, 0x10, 0xfd, 0x71, 0x8c, 0x9e, 0xe0, 0x7e, 0xa0,
+	0xb3, 0x48, 0x2a, 0x9a, 0xdd, 0x9e, 0x2b, 0x62, 0x0d, 0x02, 0xda, 0x00, 0x18, 0x25, 0x6a, 0xf4,
+	0x8b, 0xc3, 0xf8, 0x29, 0x92, 0xaa, 0xfe, 0xe8, 0x94, 0x07, 0x8b, 0x28, 0x44, 0xcd, 0x14, 0x7d,
+	0x52, 0xd3, 0xac, 0xf6, 0xb9, 0xc2, 0x98, 0xb3, 0x90, 0xd4, 0x69, 0x13, 0xaa, 0x53, 0xce, 0xce,
+	0x59, 0x10, 0x32, 0x37, 0x44, 0xd2, 0xd0, 0xea, 0x01, 0x53, 0xec, 0x7b, 0x21, 0x25, 0x69, 0xea,
+	0x68, 0xa7, 0x9c, 0x25, 0x6a, 0x8e, 0x5c, 0x05, 0x1e, 0xd3, 0x1e, 0xc8, 0xee, 0x3f, 0x36, 0x34,
+	0x0f, 0x84, 0xab, 0x2b, 0x88, 0x47, 0xcc, 0x9b, 0x07, 0x1c, 0xe9, 0x00, 0xec, 0x71, 0xa2, 0xe8,
+	0x96, 0x2e, 0xba, 0x7e, 0x0c, 0xdb, 0xcf, 0xee, 0xd0, 0x9a, 0xb6, 0xec, 0xee, 0xd0, 0x01, 0x14,
+	0xcd, 0xab, 0x43, 0xbf, 0xd8, 0x84, 0xde, 0x78, 0x8f, 0xda, 0x9f, 0x6c, 0x02, 0x86, 0xfa, 0x19,
+	0xee, 0xee, 0xd0, 0x31, 0x94, 0xb2, 0xe5, 0x4f, 0x3b, 0x77, 0xed, 0xd5, 0x95, 0x9f, 0xe7, 0xf7,
+	0x20, 0x56, 0xbc, 0xde, 0x6b, 0x8f, 0xe9, 0x32, 0xdc, 0xee, 0x71, 0x7d, 0x4f, 0xde, 0xc7, 0xec,
+	0x2d, 0x14, 0xd2, 0xc5, 0x47, 0x3f, 0xdf, 0xc4, 0xac, 0x6f, 0xc4, 0xfb, 0x7c, 0x7c, 0x07, 0x79,
+	0xbd, 0x15, 0xe9, 0x96, 0x64, 0xae, 0x6d, 0xcb, 0x07, 0x3c, 0xe8, 0x8d, 0xb9, 0xcd, 0xc3, 0xda,
+	0x26, 0xbd, 0xc7, 0x83, 0x5b, 0x4c, 0xff, 0x75, 0xbe, 0xf9, 0x37, 0x00, 0x00, 0xff, 0xff, 0x99,
+	0xe0, 0x2c, 0xd5, 0x30, 0x09, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -603,7 +1075,7 @@ type JobStateMachineClient interface {
 	//
 	// Accepts a stream of reservation requests. Reservation are streamed
 	// as they are available.
-	Reserve(ctx context.Context, opts ...grpc.CallOption) (JobStateMachine_ReserveClient, error)
+	Reserve(ctx context.Context, in *ReserveRequest, opts ...grpc.CallOption) (*ReserveResponse, error)
 	// Release a reserved job back to either a Ready or a Delayed state
 	Release(ctx context.Context, in *ReleaseRequest, opts ...grpc.CallOption) (*Empty, error)
 	// Extend a reserved job's reservation TTL by its TTR (time-to-run)
@@ -640,35 +1112,13 @@ func (c *jobStateMachineClient) Delete(ctx context.Context, in *DeleteRequest, o
 	return out, nil
 }
 
-func (c *jobStateMachineClient) Reserve(ctx context.Context, opts ...grpc.CallOption) (JobStateMachine_ReserveClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_JobStateMachine_serviceDesc.Streams[0], "/coolbeans.api.v1.JobStateMachine/Reserve", opts...)
+func (c *jobStateMachineClient) Reserve(ctx context.Context, in *ReserveRequest, opts ...grpc.CallOption) (*ReserveResponse, error) {
+	out := new(ReserveResponse)
+	err := c.cc.Invoke(ctx, "/coolbeans.api.v1.JobStateMachine/Reserve", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &jobStateMachineReserveClient{stream}
-	return x, nil
-}
-
-type JobStateMachine_ReserveClient interface {
-	Send(*ReserveRequest) error
-	Recv() (*ReserveResponse, error)
-	grpc.ClientStream
-}
-
-type jobStateMachineReserveClient struct {
-	grpc.ClientStream
-}
-
-func (x *jobStateMachineReserveClient) Send(m *ReserveRequest) error {
-	return x.ClientStream.SendMsg(m)
-}
-
-func (x *jobStateMachineReserveClient) Recv() (*ReserveResponse, error) {
-	m := new(ReserveResponse)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
+	return out, nil
 }
 
 func (c *jobStateMachineClient) Release(ctx context.Context, in *ReleaseRequest, opts ...grpc.CallOption) (*Empty, error) {
@@ -719,7 +1169,7 @@ type JobStateMachineServer interface {
 	//
 	// Accepts a stream of reservation requests. Reservation are streamed
 	// as they are available.
-	Reserve(JobStateMachine_ReserveServer) error
+	Reserve(context.Context, *ReserveRequest) (*ReserveResponse, error)
 	// Release a reserved job back to either a Ready or a Delayed state
 	Release(context.Context, *ReleaseRequest) (*Empty, error)
 	// Extend a reserved job's reservation TTL by its TTR (time-to-run)
@@ -740,8 +1190,8 @@ func (*UnimplementedJobStateMachineServer) Put(ctx context.Context, req *PutRequ
 func (*UnimplementedJobStateMachineServer) Delete(ctx context.Context, req *DeleteRequest) (*Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Delete not implemented")
 }
-func (*UnimplementedJobStateMachineServer) Reserve(srv JobStateMachine_ReserveServer) error {
-	return status.Errorf(codes.Unimplemented, "method Reserve not implemented")
+func (*UnimplementedJobStateMachineServer) Reserve(ctx context.Context, req *ReserveRequest) (*ReserveResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Reserve not implemented")
 }
 func (*UnimplementedJobStateMachineServer) Release(ctx context.Context, req *ReleaseRequest) (*Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Release not implemented")
@@ -796,30 +1246,22 @@ func _JobStateMachine_Delete_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
-func _JobStateMachine_Reserve_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(JobStateMachineServer).Reserve(&jobStateMachineReserveServer{stream})
-}
-
-type JobStateMachine_ReserveServer interface {
-	Send(*ReserveResponse) error
-	Recv() (*ReserveRequest, error)
-	grpc.ServerStream
-}
-
-type jobStateMachineReserveServer struct {
-	grpc.ServerStream
-}
-
-func (x *jobStateMachineReserveServer) Send(m *ReserveResponse) error {
-	return x.ServerStream.SendMsg(m)
-}
-
-func (x *jobStateMachineReserveServer) Recv() (*ReserveRequest, error) {
-	m := new(ReserveRequest)
-	if err := x.ServerStream.RecvMsg(m); err != nil {
+func _JobStateMachine_Reserve_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReserveRequest)
+	if err := dec(in); err != nil {
 		return nil, err
 	}
-	return m, nil
+	if interceptor == nil {
+		return srv.(JobStateMachineServer).Reserve(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/coolbeans.api.v1.JobStateMachine/Reserve",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(JobStateMachineServer).Reserve(ctx, req.(*ReserveRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _JobStateMachine_Release_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -907,6 +1349,10 @@ var _JobStateMachine_serviceDesc = grpc.ServiceDesc{
 			Handler:    _JobStateMachine_Delete_Handler,
 		},
 		{
+			MethodName: "Reserve",
+			Handler:    _JobStateMachine_Reserve_Handler,
+		},
+		{
 			MethodName: "Release",
 			Handler:    _JobStateMachine_Release_Handler,
 		},
@@ -923,13 +1369,6 @@ var _JobStateMachine_serviceDesc = grpc.ServiceDesc{
 			Handler:    _JobStateMachine_Kick_Handler,
 		},
 	},
-	Streams: []grpc.StreamDesc{
-		{
-			StreamName:    "Reserve",
-			Handler:       _JobStateMachine_Reserve_Handler,
-			ServerStreams: true,
-			ClientStreams: true,
-		},
-	},
+	Streams:  []grpc.StreamDesc{},
 	Metadata: "jsm.proto",
 }

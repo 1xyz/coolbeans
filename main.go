@@ -212,6 +212,8 @@ func runCoolbeans(c *Config, nodeID string, joinID string) error {
 	grpcServer := grpc.NewServer(opts...)
 	v1.RegisterClusterServer(grpcServer,
 		server.NewClusterServer(s))
+	v1.RegisterJobStateMachineServer(grpcServer,
+		server.NewJSMServer(s))
 
 	logc.Infof("tcp server listen on %v", nc.ListenAddr)
 	lis, err := net.Listen("tcp", nc.ListenAddr)
