@@ -46,8 +46,8 @@ testv: clean fmt
 
 testc: clean fmt
 	# ToDo check out https://github.com/ory/go-acc
-	$(GO) test -coverprofile=coverage.out ./...
-	$(GO) tool cover -html=coverage.out
+	./coverage_test.sh 
+	$(GO) tool cover -html=coverage.txt
 
 fmt:
 	$(GOFMT) -l -w $(SRC)

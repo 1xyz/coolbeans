@@ -170,6 +170,10 @@ func (s *Store) Join(nodeID, addr string) error {
 	return nil
 }
 
+func (s *Store) IsLeader() bool {
+	return s.raft.State() == raft.Leader
+}
+
 // //////////////////////////////////////////////////////////////////////
 
 func (s *Store) ApplyOp(req *v1.ApplyOpRequest) *v1.ApplyOpResponse {
@@ -261,7 +265,7 @@ func (f *fsm) Apply(l *raft.Log) interface{} {
 		"term": l.Term, "type": l.Type})
 
 	applyReq := newApplyReq(l.Data)
-	logc.Debugf("op-type %v", applyReq.Op)
+	logc.Debugf("op-type %v now %v", applyReq.Op, applyReq.NowSecs)
 
 	switch applyReq.Op {
 	case v1.OpType_PUT:
@@ -274,6 +278,9 @@ func (f *fsm) Apply(l *raft.Log) interface{} {
 		unmarshalP(applyReq.Body, &rReq)
 		rResp, err := f.ApplyReserve(applyReq.NowSecs, &rReq)
 		return newApplyRespBytes(rResp, err)
+	case v1.OpType_TICK:
+		tResp, err := f.ApplyTick(applyReq.NowSecs)
+		return newApplyRespBytes(tResp, err)
 	default:
 		return marshalP(&v1.ApplyOpResponse{
 			ErrorCode:    v1.ResultCode_Unimplemented,
@@ -335,40 +342,96 @@ func (f *fsm) ApplyPut(nowSecs int64, pReq *v1.PutRequest) (*v1.PutResponse, err
 	}, nil
 }
 
-// //////////////////////////////////////////////////////////////////////
-
 func (f *fsm) ApplyReserve(nowSecs int64, req *v1.ReserveRequest) (*v1.ReserveResponse, error) {
 	watchedTubes := make([]state.TubeName, 0)
 	for _, t := range req.WatchedTubes {
 		watchedTubes = append(watchedTubes, state.TubeName(t))
 	}
 
+	cu := NewClientURI(req.ProxyId, req.ClientId)
+	if err := cu.Validate(); err != nil {
+		log.WithField("method", "ApplyReserve").
+			Errorf("clientUri.validate %v", err)
+		return nil, err
+	}
+
 	r, err := f.jsm.AppendReservation(
-		state.ClientID(req.ClientId),
+		cu.ToClientID(),
 		req.RequestId,
 		watchedTubes,
 		nowSecs,
 		nowSecs+int64(req.TimeoutSecs))
 	if err != nil {
-		log.WithField("method", "applyReservation").
+		log.WithField("method", "ApplyReserve").
 			Errorf("jsm.AppendReservation. err=%v", err)
 		return nil, err
 	}
 
+	v1r, err := toV1Reservation(r)
+	if err != nil {
+		log.WithField("method", "ApplyReserve").
+			Errorf("toV1Reservation  r=%v. err=%v", r, err)
+		return nil, err
+	}
+
+	return &v1.ReserveResponse{
+		Reservation: v1r,
+	}, nil
+}
+
+func (f *fsm) ApplyTick(nowSecs int64) (*v1.TickResponse, error) {
+	rs, err := f.jsm.Tick(nowSecs)
+	if err != nil {
+		log.WithField("method", "ApplyTick").
+			Errorf("jsm.AppendReservation. err=%v", err)
+		return nil, err
+	}
+
+	// group the reservations by proxy id
+	proxyReservations := map[string]*v1.Reservations{}
+	for _, r := range rs {
+		v1r, err := toV1Reservation(r)
+		if err != nil {
+			log.WithField("method", "ApplyTick").
+				Errorf("toV1Reservation r=%v. err=%v", r, err)
+			return nil, err
+		}
+
+		if resvns, ok := proxyReservations[v1r.ProxyId]; !ok {
+			proxyReservations[v1r.ProxyId] = &v1.Reservations{
+				Entries: []*v1.Reservation{v1r},
+			}
+		} else {
+			resvns.Entries = append(resvns.Entries, v1r)
+		}
+	}
+
+	return &v1.TickResponse{
+		ProxyReservations: proxyReservations,
+	}, nil
+}
+
+func toV1Reservation(r *state.Reservation) (*v1.Reservation, error) {
 	errMsg := ""
 	if r.Error != nil {
 		errMsg = r.Error.Error()
 	}
 
-	return &v1.ReserveResponse{
-		Reservation: &v1.Reservation{
-			RequestId: r.RequestId,
-			ClientId:  string(r.ClientId),
-			Status:    v1.ReservationStatus(r.Status),
-			JobId:     int64(r.JobId),
-			BodySize:  int32(r.BodySize),
-			Body:      r.Body,
-			ErrorMsg:  errMsg,
-		},
+	cu, err := ParseClientURI(r.ClientId)
+	if err != nil {
+		log.WithField("method", "applyReserve").
+			Errorf("ParseClientURI clientID=%v err=%v", r.ClientId, err)
+		return nil, err
+	}
+
+	return &v1.Reservation{
+		RequestId: r.RequestId,
+		ClientId:  cu.clientID,
+		ProxyId:   cu.proxyID,
+		Status:    v1.ReservationStatus(r.Status),
+		JobId:     int64(r.JobId),
+		BodySize:  int32(r.BodySize),
+		Body:      r.Body,
+		ErrorMsg:  errMsg,
 	}, nil
 }

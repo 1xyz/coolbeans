@@ -20,7 +20,7 @@ import (
 func init() {
 	log.SetFormatter(&log.TextFormatter{})
 	log.SetOutput(os.Stdout)
-	log.SetLevel(log.DebugLevel)
+	log.SetLevel(log.InfoLevel)
 }
 
 func main() {
@@ -212,8 +212,10 @@ func runCoolbeans(c *Config, nodeID string, joinID string) error {
 	grpcServer := grpc.NewServer(opts...)
 	v1.RegisterClusterServer(grpcServer,
 		server.NewClusterServer(s))
+	jsmServer := server.NewJSMServer(s)
 	v1.RegisterJobStateMachineServer(grpcServer,
-		server.NewJSMServer(s))
+		jsmServer)
+	go jsmServer.RunController()
 
 	logc.Infof("tcp server listen on %v", nc.ListenAddr)
 	lis, err := net.Listen("tcp", nc.ListenAddr)

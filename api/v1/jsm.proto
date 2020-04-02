@@ -15,11 +15,13 @@ service JobStateMachine {
     // Delete a job with the provided job id
     rpc Delete (DeleteRequest) returns (Empty) {}
 
-    // Reserve is a bi-directional streaming RPC
-    //
-    // Accepts a stream of reservation requests. Reservation are streamed
-    // as they are available.
+    // Reserve is a request to reserve a channel for a client by this proxy
     rpc Reserve (ReserveRequest) returns (ReserveResponse) {}
+
+    // StreamReserveUpdates is a streaming RPC from the server back to client
+    //
+    // Reservations are streamed as they are available for this proxy
+    rpc StreamReserveUpdates(ReserveUpdateRequest) returns (stream ReserveResponse) {}
 
     // Release a reserved job back to either a Ready or a Delayed state
     rpc Release (ReleaseRequest) returns (Empty) {}
@@ -76,11 +78,34 @@ message ReserveRequest {
 
     // array of tubes to watch
     repeated string watched_tubes = 4;
+
+    // the proxy identifier forwarding the client's request
+    string proxy_id = 5;
 }
 
 message ReserveResponse {
     // Reservation object encapsulated in this response
     Reservation reservation = 1;
+}
+
+message ReserveUpdateRequest {
+    // the proxy identifier requesting reservation update
+    string proxy_id = 1;
+}
+
+message ReserveUpdateResponse {
+    // Reservations  encapsulated in this response
+    Reservation reservation = 1;
+}
+
+message TickResponse {
+    // Reservations grouped by proxy id
+    map<string, Reservations> proxy_reservations = 3;
+}
+
+message Reservations {
+    // Reservation object encapsulated in this response
+    repeated Reservation entries = 1;
 }
 
 enum ReservationStatus {
@@ -118,6 +143,10 @@ message Reservation {
 
     // error message (assigned) if Status is error
     string error_msg = 7;
+
+    // proxy_id is the id of the proxy server that
+    // forwarded this reservation request
+    string proxy_id = 8;
 }
 
 
@@ -188,6 +217,7 @@ enum OpType {
     UNKNOWN = 0;
     PUT = 1;
     RESERVE = 2;
+    TICK = 3;
 }
 
 // C & P from GRPC error codes

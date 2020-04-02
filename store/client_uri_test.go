@@ -1,4 +1,4 @@
-package server
+package store
 
 import (
 	"github.com/1xyz/beanstalkd/state"
@@ -9,11 +9,11 @@ import (
 func TestParseClientID(t *testing.T) {
 	var entries = []struct {
 		inputCliID   state.ClientID
-		outClientURI *clientURI
+		outClientURI *ClientURI
 		outErr       error
 	}{
-		{state.ClientID("client:alpha:beta"), &clientURI{proxyID: "alpha", clientID: "beta"}, nil},
-		{state.ClientID("client:alpha:beta:omega"), &clientURI{proxyID: "alpha", clientID: "beta:omega"}, nil},
+		{state.ClientID("client:alpha:beta"), &ClientURI{proxyID: "alpha", clientID: "beta"}, nil},
+		{state.ClientID("client:alpha:beta:omega"), &ClientURI{proxyID: "alpha", clientID: "beta:omega"}, nil},
 		{state.ClientID("client:alpha:"), nil, ErrValidationFailed},
 		{state.ClientID("client::beta"), nil, ErrValidationFailed},
 		{state.ClientID("client:alpha"), nil, ErrInvalidRequestFragment},
@@ -22,7 +22,7 @@ func TestParseClientID(t *testing.T) {
 	}
 
 	for _, e := range entries {
-		c, err := ParseClientID(e.inputCliID)
+		c, err := ParseClientURI(e.inputCliID)
 		assert.Equalf(t, e.outClientURI, c, "expect clientURI to match")
 		assert.Equalf(t, e.outErr, err, "expect err to match")
 	}

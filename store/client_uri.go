@@ -1,4 +1,4 @@
-package server
+package store
 
 import (
 	"errors"
@@ -18,19 +18,19 @@ var (
 	ErrInvalidSchema          = errors.New("uri schema did not match or not present")
 )
 
-type clientURI struct {
+type ClientURI struct {
 	proxyID  string
 	clientID string
 }
 
-func NewClientURI(proxyID string, clientID string) *clientURI {
-	return &clientURI{
+func NewClientURI(proxyID string, clientID string) *ClientURI {
+	return &ClientURI{
 		proxyID:  proxyID,
 		clientID: clientID,
 	}
 }
 
-func ParseClientID(clientID state.ClientID) (*clientURI, error) {
+func ParseClientURI(clientID state.ClientID) (*ClientURI, error) {
 	u, err := url.Parse(string(clientID))
 	if err != nil {
 		log.Errorf("invalid uri. err %v", err)
@@ -56,7 +56,7 @@ func ParseClientID(clientID state.ClientID) (*clientURI, error) {
 	return c, nil
 }
 
-func (c *clientURI) Validate() error {
+func (c *ClientURI) Validate() error {
 	if len(c.clientID) == 0 || len(c.proxyID) == 0 {
 		log.Errorf("invalid clientid=%v or proxyid=%v", c.clientID, c.proxyID)
 		return ErrValidationFailed
@@ -65,6 +65,6 @@ func (c *clientURI) Validate() error {
 	return nil
 }
 
-func (c *clientURI) ToClientID() state.ClientID {
+func (c *ClientURI) ToClientID() state.ClientID {
 	return state.ClientID(fmt.Sprintf("%s:%s:%s", scheme, c.proxyID, c.clientID))
 }
