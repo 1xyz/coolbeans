@@ -50,6 +50,10 @@ func (j *JSMServer) Put(ctx context.Context, req *v1.PutRequest) (*v1.PutRespons
 	return &resp, nil
 }
 
+func (j *JSMServer) Delete(ctx context.Context, req *v1.DeleteRequest) (*v1.Empty, error)  {
+
+}
+
 func (j *JSMServer) Reserve(ctx context.Context, req *v1.ReserveRequest) (*v1.ReserveResponse, error) {
 	var resp v1.ReserveResponse
 	if err := j.performApply(v1.OpType_RESERVE, req, &resp); err != nil {

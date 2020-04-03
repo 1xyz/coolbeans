@@ -64,6 +64,12 @@ message PutResponse {
 message DeleteRequest {
     // The job identifier of the job to be deleted
     int64 job_id = 1;
+
+    // the proxy identifier forwarding the client's request
+    string proxy_id = 2;
+
+    // the client identifier of the client (deleting this job)
+    string client_id = 3;
 }
 
 message ReserveRequest {
