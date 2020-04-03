@@ -50,8 +50,24 @@ func (j *JSMServer) Put(ctx context.Context, req *v1.PutRequest) (*v1.PutRespons
 	return &resp, nil
 }
 
-func (j *JSMServer) Delete(ctx context.Context, req *v1.DeleteRequest) (*v1.Empty, error)  {
+func (j *JSMServer) Delete(ctx context.Context, req *v1.DeleteRequest) (*v1.Empty, error) {
+	var resp v1.Empty
+	if err := j.performApply(v1.OpType_DELETE, req, &resp); err != nil {
+		log.WithField("method", "Delete").Errorf("performApply. Err=%v", err)
+		return nil, err
+	}
 
+	return &resp, nil
+}
+
+func (j *JSMServer) Release(ctx context.Context, req *v1.ReleaseRequest) (*v1.Empty, error) {
+	var resp v1.Empty
+	if err := j.performApply(v1.OpType_RELEASE, req, &resp); err != nil {
+		log.WithField("method", "Release").Errorf("performApply. Err=%v", err)
+		return nil, err
+	}
+
+	return &resp, nil
 }
 
 func (j *JSMServer) Reserve(ctx context.Context, req *v1.ReserveRequest) (*v1.ReserveResponse, error) {

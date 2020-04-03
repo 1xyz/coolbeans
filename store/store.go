@@ -265,22 +265,37 @@ func (f *fsm) Apply(l *raft.Log) interface{} {
 		"term": l.Term, "type": l.Type})
 
 	applyReq := newApplyReq(l.Data)
-	logc.Debugf("op-type %v now %v", applyReq.Op, applyReq.NowSecs)
+	logc.Infof("op-type %v now %v", applyReq.Op, applyReq.NowSecs)
 
 	switch applyReq.Op {
+	case v1.OpType_DELETE:
+		var dReq v1.DeleteRequest
+		unmarshalP(applyReq.Body, &dReq)
+		dResp, err := f.ApplyDelete(&dReq)
+		return newApplyRespBytes(dResp, err)
+
 	case v1.OpType_PUT:
 		var pReq v1.PutRequest
 		unmarshalP(applyReq.Body, &pReq)
 		pResp, err := f.ApplyPut(applyReq.NowSecs, &pReq)
 		return newApplyRespBytes(pResp, err)
+
+	case v1.OpType_RELEASE:
+		var rReq v1.ReleaseRequest
+		unmarshalP(applyReq.Body, &rReq)
+		rResp, err := f.ApplyRelease(&rReq)
+		return newApplyRespBytes(rResp, err)
+
 	case v1.OpType_RESERVE:
 		var rReq v1.ReserveRequest
 		unmarshalP(applyReq.Body, &rReq)
 		rResp, err := f.ApplyReserve(applyReq.NowSecs, &rReq)
 		return newApplyRespBytes(rResp, err)
+
 	case v1.OpType_TICK:
 		tResp, err := f.ApplyTick(applyReq.NowSecs)
 		return newApplyRespBytes(tResp, err)
+
 	default:
 		return marshalP(&v1.ApplyOpResponse{
 			ErrorCode:    v1.ResultCode_Unimplemented,
@@ -340,6 +355,38 @@ func (f *fsm) ApplyPut(nowSecs int64, pReq *v1.PutRequest) (*v1.PutResponse, err
 	return &v1.PutResponse{
 		JobId: int64(j.ID()),
 	}, nil
+}
+
+func (f *fsm) ApplyDelete(req *v1.DeleteRequest) (*v1.Empty, error) {
+	cu := NewClientURI(req.ProxyId, req.ClientId)
+	if err := cu.Validate(); err != nil {
+		log.WithField("method", "ApplyDelete").
+			Errorf("clientUri.validate %v", err)
+		return nil, err
+	}
+
+	err := f.jsm.Delete(state.JobID(req.JobId), cu.ToClientID())
+	if err != nil {
+		return nil, err
+	}
+
+	return &v1.Empty{}, nil
+}
+
+func (f *fsm) ApplyRelease(req *v1.ReleaseRequest) (*v1.Empty, error) {
+	cu := NewClientURI(req.ProxyId, req.ClientId)
+	if err := cu.Validate(); err != nil {
+		log.WithField("method", "ApplyDelete").
+			Errorf("clientUri.validate %v", err)
+		return nil, err
+	}
+
+	err := f.jsm.Release(state.JobID(req.JobId), cu.ToClientID())
+	if err != nil {
+		return nil, err
+	}
+
+	return &v1.Empty{}, nil
 }
 
 func (f *fsm) ApplyReserve(nowSecs int64, req *v1.ReserveRequest) (*v1.ReserveResponse, error) {

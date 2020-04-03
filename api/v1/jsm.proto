@@ -161,10 +161,14 @@ message ReleaseRequest {
     int64 job_id = 1;
 
     // The identifier of the client asking for the release
-    int64 client_id = 2;
+    string client_id = 2;
+
+    // proxy_id is the id of the proxy server that
+    // forwarded this  request
+    string proxy_id = 3;
 
     // A delay if set to a value > 0 marks the job as delayed
-    int32 delay = 3;
+    int32 delay = 4;
 }
 
 message TouchRequest {
@@ -224,6 +228,8 @@ enum OpType {
     PUT = 1;
     RESERVE = 2;
     TICK = 3;
+    DELETE = 4;
+    RELEASE = 5;
 }
 
 // C & P from GRPC error codes
