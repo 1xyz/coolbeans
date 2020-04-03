@@ -3,7 +3,7 @@ package store
 import (
 	"errors"
 	"fmt"
-	"github.com/1xyz/beanstalkd/state"
+	"github.com/1xyz/coolbeans/state"
 	log "github.com/sirupsen/logrus"
 	"net/url"
 	"strings"

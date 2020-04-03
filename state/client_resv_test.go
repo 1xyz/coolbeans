@@ -1,6 +1,7 @@
 package state
 
 import (
+	"errors"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -112,7 +113,7 @@ func TestClientResvQueue_Enqueue(t *testing.T) {
 	assert.Nilf(t, err, "expect err to be nil")
 
 	err = cs.Enqueue(cli)
-	assert.Equalf(t, ErrEntryExists, err, "expect err to be ErrEntryExists")
+	assert.Truef(t, errors.Is(err, ErrEntryExists), "expect err to contain ErrEntryExists")
 
 	err = cs.Enqueue(newTestClientResvEntry(1))
 	assert.Nilf(t, err, "expect err to be nil")
@@ -230,7 +231,7 @@ func TestClientResvMap_Put_ReturnsErr(t *testing.T) {
 	cli1 := newTestClientResvEntry(1)
 	err := c.Put(cli1)
 	err = c.Put(cli1)
-	assert.Equalf(t, ErrEntryExists, err, "expect err to be ErrEntryExists")
+	assert.Truef(t, errors.Is(err, ErrEntryExists), "expect err to contain ErrEntryExists")
 }
 
 func TestClientResvMap_Get(t *testing.T) {

@@ -9,7 +9,6 @@
 package state
 
 import (
-	"errors"
 	"golang.org/x/net/context"
 )
 
@@ -353,61 +352,3 @@ type Reservation struct {
 	Body      []byte
 	Error     error
 }
-
-var (
-	// ErrNoData - when the input stream has no data this can be the case
-	// if the underlying reader return zero bytes  and is however not at EOF
-	ErrNoData = errors.New("no data")
-
-	// ErrDelimiterMissing - when the input stream has no newlines (\r\n)
-	ErrDelimiterMissing = errors.New("delimiter (\\r\\n) missing in command")
-
-	// ErrBadFormat The client sent a command line that was not well-formed.
-	// This can happen if the line's length exceeds 224 bytes including \r\n,
-	// if the name of a tube exceeds 200 bytes, if non-numeric
-	// characters occur where an integer is expected, if the wrong number of
-	// arguments are present, or if the command line is mal-formed in any other
-	ErrBadFormat = errors.New("bad format command")
-
-	// ErrCmdTokensMissing - when the provided command has no tokens
-	ErrCmdTokensMissing = errors.New("bad command, cannot find atleast one token")
-
-	// ErrCmdNotFound - the provided command is not found or supported
-	ErrCmdNotFound = errors.New("command not found")
-
-	// ErrInvalidIndex no job entry found at the index
-	ErrInvalidIndex = errors.New("provided index is out of range of the heap")
-
-	// ErrMismatchJobEntry - returned when job entry at index does not match the heap's value
-	ErrMismatchJobEntry = errors.New("job entry at index does not match provided entry")
-
-	// ErrEntryExists - returned when an entry exists in the existing map/set to prevents from overriding
-	ErrEntryExists = errors.New("entry exists in container")
-
-	// ErrEntryMissing - returned when an entry is not found in the container
-	ErrEntryMissing = errors.New("entry not found in container")
-
-	// ErrContainerEmpty - returned when the container such as a list/map/slice etc is empty
-	ErrContainerEmpty = errors.New("the container is empty")
-
-	// ErrInvalidJobTransition - the current state of the job prevents this transition
-	ErrInvalidJobTransition = errors.New("invalid transition")
-
-	// ErrUnauthorizedOperation - This state requires a matching client to perform this transition
-	ErrUnauthorizedOperation = errors.New("client is not authorized to perform this operation")
-
-	// ErrUnsupportedOperation - Indicates that the implementation is un-supported
-	ErrUnSupportedOperation = errors.New("UnSupported operation")
-
-	// ErrCancel - indicates the request is cancelled
-	ErrCancel = errors.New("cancelled")
-
-	// ErrNoReservation - indicates that a request for a reservation could not be completed
-	ErrNoReservationFound = errors.New("no reservation could be found")
-
-	// ErrInvalidResvTimeout - indicates the provided reservation timeout is invalid
-	ErrInvalidResvTimeout = errors.New("the provided reservation timeout is invalid")
-
-	// ErrClientIsWaitingForReservation - Indicates the client is waiting for a reservation
-	ErrClientIsWaitingForReservation = errors.New("the request client cannot request for another reservation")
-)

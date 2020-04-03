@@ -3,6 +3,7 @@ package state
 import (
 	"container/heap"
 	"container/list"
+	"fmt"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 	"math"
@@ -179,7 +180,7 @@ func newClientResvQueue() *clientResvQueue {
 
 func (c *clientResvQueue) Enqueue(entry *ClientResvEntry) error {
 	if c.Contains(entry) {
-		return ErrEntryExists
+		return fmt.Errorf("entry with clientID=%s exists %w", entry.CliID, ErrEntryExists)
 	}
 
 	elem := c.l.PushBack(entry)
@@ -265,7 +266,7 @@ func (c clientResvMap) Contains(id ClientID) bool {
 
 func (c clientResvMap) Put(entry *ClientResvEntry) error {
 	if c.Contains(entry.CliID) {
-		return ErrEntryExists
+		return fmt.Errorf("entry with clientID:%v exists. %w", entry.CliID, ErrEntryExists)
 	}
 
 	c[entry.CliID] = entry

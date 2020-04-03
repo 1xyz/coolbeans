@@ -3,7 +3,7 @@ package store
 import (
 	"bytes"
 	"fmt"
-	"github.com/1xyz/beanstalkd/state"
+	"github.com/1xyz/coolbeans/state"
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"

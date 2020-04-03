@@ -1,8 +1,8 @@
 package store
 
 import (
-	"github.com/1xyz/beanstalkd/state"
 	v1 "github.com/1xyz/coolbeans/api/v1"
+	"github.com/1xyz/coolbeans/state"
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/raft"
 	log "github.com/sirupsen/logrus"

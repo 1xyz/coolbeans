@@ -1,6 +1,7 @@
 package state
 
 import (
+	"fmt"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -34,7 +35,7 @@ func (idx *JobIndex) Len() int {
 
 func (idx *JobIndex) Add(job Job) (*IndexEntry, error) {
 	if _, ok := idx.m[job.ID()]; ok {
-		return nil, ErrEntryExists
+		return nil, fmt.Errorf("job with id=%v exists %w", job.ID(), ErrEntryExists)
 	}
 
 	e := IndexEntry{

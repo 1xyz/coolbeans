@@ -2,8 +2,8 @@ package store
 
 import (
 	"fmt"
-	"github.com/1xyz/beanstalkd/state"
 	v1 "github.com/1xyz/coolbeans/api/v1"
+	"github.com/1xyz/coolbeans/state"
 	pb "github.com/golang/protobuf/proto"
 	"github.com/hashicorp/raft"
 	raftboltdb "github.com/hashicorp/raft-boltdb"
