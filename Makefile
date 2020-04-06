@@ -33,7 +33,7 @@ protoc:
 
 release/%: clean fmt
 	@echo "build GOOS: $(subst release/,,$@) & GOARCH: amd64"
-	GOOS=$(subst release/,,$@) GOARCH=amd64 $(GO) GOPRIVATE=github.com/1xyz/beanstalkd build -o bin/$(subst release/,,$@)/$(BINARY) -v main.go
+	GOOS=$(subst release/,,$@) GOARCH=amd64 $(GO) build -o bin/$(subst release/,,$@)/$(BINARY) -v main.go
 
 run: build
 	./bin/$(BINARY)
