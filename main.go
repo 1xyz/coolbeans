@@ -27,7 +27,7 @@ func main() {
 	usage := `coolbeans.
 
 Usage:
-  coolbeans [--node-id=<id>]  [--config-file=<file>] [--join-id=<id>] 
+  coolbeans run-node [--node-id=<id>]  [--config-file=<file>] [--join-id=<id>] 
   coolbeans -h | --help
 
 Options:
@@ -43,30 +43,34 @@ Options:
 
 	fmt.Printf("opts=%v\n", opts)
 
-	localNodeID, err := opts.String("--node-id")
-	if err != nil {
-		log.Fatalf("error reading --node-id %v", err)
-	}
+	if runNode, err := opts.Bool("--run-node"); err != nil {
+		log.Fatalf("err parsing run-node argument %v", err)
+	} else if runNode == true {
+		localNodeID, err := opts.String("--node-id")
+		if err != nil {
+			log.Fatalf("error reading --node-id %v", err)
+		}
 
-	joinNodeID, err := opts.String("--join-id")
-	if err != nil {
-		log.Fatalf("error reading --join-id %v", err)
-	}
+		joinNodeID, err := opts.String("--join-id")
+		if err != nil {
+			log.Fatalf("error reading --join-id %v", err)
+		}
 
-	file, err := opts.String("--config-file")
-	if err != nil {
-		log.Fatalf("error reading --config-file variable %v", err)
-	}
+		file, err := opts.String("--config-file")
+		if err != nil {
+			log.Fatalf("error reading --config-file variable %v", err)
+		}
 
-	c, err := LoadFrom(file)
-	if err != nil {
-		log.Fatalf("cannot load config from file=%v err=%v", file, err)
-	}
+		c, err := LoadFrom(file)
+		if err != nil {
+			log.Fatalf("cannot load config from file=%v err=%v", file, err)
+		}
 
-	log.Infof("NodeID = %v config-%v JoinNodeID=%v", localNodeID, c, joinNodeID)
+		log.Infof("NodeID = %v config-%v JoinNodeID=%v", localNodeID, c, joinNodeID)
 
-	if err := runCoolbeans(c, localNodeID, joinNodeID); err != nil {
-		log.Fatalf("runcoolbeans err = %v", err)
+		if err := runCoolbeans(c, localNodeID, joinNodeID); err != nil {
+			log.Fatalf("runcoolbeans err = %v", err)
+		}
 	}
 }
 
