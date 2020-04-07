@@ -7,11 +7,12 @@ import (
 )
 
 func cmdBeanstalkd(argv []string, version string) {
-	usage := `usage: beanstalkd [-l=<addr> | --listen-addr=<addr>] [-p=<port> | --listen-port=<port>]
+	usage := `usage: beanstalkd [-l=<addr> | --listen-addr=<addr>] [-p=<port> | --listen-port=<port>] [--jsm-addrs=<addrs>]
 Options:
   -h --help                          Show this screen.
   -l=<address> --listen-addr=<addr>  Listen on address [default: 0.0.0.0].
-  -p=<port> --listen-port=<port>     Listen on port [default:11300].
+  -p=<port> --listen-port=<port>     Listen on port [default:11300]
+  -j=<addrs> --jsm-addrs=<addrs>     Connect to JSM servers, local if ignored [default: ].
 `
 	opts, err := docopt.ParseArgs(usage, argv[1:], version)
 	if err != nil {

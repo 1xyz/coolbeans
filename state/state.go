@@ -211,23 +211,23 @@ type JSM interface {
 	// NextDelayedJob returns the job in the Delay state in order of
 	// priority for this tube. A job with and earlier (lower) delay
 	// takes higher precedence.
-	NextDelayedJob(tubeName TubeName) (Job, error)
+	// NextDelayedJob(tubeName TubeName) (Job, error)
 
 	// NextReadyJob returns the job in the Ready state in order of
 	// priority for this tube. A job with a lower priority value
 	// takes higher precedence.
-	NextReadyJob(tubeName TubeName) (Job, error)
+	// NextReadyJob(tubeName TubeName) (Job, error)
 
 	// NextReservedJob returns the job in a Reserved state in order of
 	// priority for this client. A job with an earlier ExpiresAt takes
 	// higher precedence.
-	NextReservedJob(clientID ClientID) (Job, error)
+	// NextReservedJob(clientID ClientID) (Job, error)
 
 	// Ready transitions this Delayed/Buried job to  Ready
-	Ready(jobID JobID) error
+	// Ready(jobID JobID) error
 
 	// Reserve transitions this Ready job to be Reserved by this client
-	Reserve(nowSeconds int64, jobID JobID, clientID ClientID) error
+	// Reserve(nowSeconds int64, jobID JobID, clientID ClientID) error
 
 	// Release transitioned this reserved job to a Ready one
 	Release(jobID JobID, clientID ClientID) error

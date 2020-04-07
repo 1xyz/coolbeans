@@ -4,6 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/1xyz/coolbeans/beanstalkd/core"
+	"github.com/1xyz/coolbeans/beanstalkd/proxy"
+	"github.com/1xyz/coolbeans/state"
+	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 	"net"
 	"sync"
@@ -24,10 +27,30 @@ type TcpServer struct {
 	shutdownWG *sync.WaitGroup
 }
 
-func NewTcpServer(address string) *TcpServer {
+func NewJSM(jsmAddrs string) state.JSM {
+	if len(jsmAddrs) == 0 {
+		jsm, err := state.NewJSM()
+		if err != nil {
+			log.Panicf("CommandProcessor NewJSM() err=%v", err)
+		}
+
+		return jsm
+	}
+
+	nc := proxy.NewClient(uuid.New().URN(), []string{jsmAddrs}, 10*time.Second)
+	if err := nc.Open(); err != nil {
+		log.Panicf("proxyClient.Open(..). err=%v", err)
+	}
+
+	return nc
+}
+
+func NewTcpServer(address string, jsmAddrs string) *TcpServer {
+	jsm := NewJSM(jsmAddrs)
+
 	return &TcpServer{
 		address:    address,
-		cmdProc:    core.NewCommandProcess(),
+		cmdProc:    core.NewCommandProcess(jsm),
 		doneCh:     make(chan bool),
 		shutdownWG: &sync.WaitGroup{},
 	}

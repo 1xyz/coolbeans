@@ -12,11 +12,12 @@ import (
 type Config struct {
 	ListenAddr string
 	ListenPort int
+	JsmAddrs   string
 }
 
 func (c Config) String() string {
-	return fmt.Sprintf("Listen Addr=%v, Port=%v",
-		c.ListenAddr, c.ListenPort)
+	return fmt.Sprintf("Listen Addr=%v, Port=%v JSMAddresses=%v",
+		c.ListenAddr, c.ListenPort, c.JsmAddrs)
 }
 
 // runTCPServer - creates and run a beanstalkd TCP server to
@@ -24,7 +25,8 @@ func (c Config) String() string {
 // a separate go-routine and return back to caller.
 // Refer method: waitForShutdown,
 func runTCPServer(c *Config) *proto.TcpServer {
-	tcpServer := proto.NewTcpServer(fmt.Sprintf("%s:%v", c.ListenAddr, c.ListenPort))
+	addr := fmt.Sprintf("%s:%v", c.ListenAddr, c.ListenPort)
+	tcpServer := proto.NewTcpServer(addr, c.JsmAddrs)
 	go func(tcpSrv *proto.TcpServer) {
 		if err := tcpSrv.Listen(); err != nil {
 			log.Errorf("tcpServer.listen err=%v", err)

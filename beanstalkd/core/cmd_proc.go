@@ -23,12 +23,7 @@ type CommandProcessor interface {
 	Shutdown()
 }
 
-func NewCommandProcess() CommandProcessor {
-	jsm, err := state.NewJSM()
-	if err != nil {
-		log.Panicf("CommandProcessor NewJSM() err=%v", err)
-	}
-
+func NewCommandProcess(jsm state.JSM) CommandProcessor {
 	return &cmdProcessor{
 		newClientReqCh:  make(chan bool),
 		newClientRespCh: make(chan ClientReg),

@@ -156,11 +156,11 @@ func (c *Client) Delete(jobID state.JobID, clientID state.ClientID) error {
 	return nil
 }
 
-func (c *Client) Tick(nowSeconds int64) []*state.Reservation {
+func (c *Client) Tick(nowSeconds int64) ([]*state.Reservation, error) {
 	if result := c.rq.Drain(); result == nil {
-		return make([]*state.Reservation, 0)
+		return make([]*state.Reservation, 0), nil
 	} else {
-		return result
+		return result, nil
 	}
 }
 
@@ -210,6 +210,14 @@ func (c *Client) RecvUpdates(done <-chan bool) error {
 	}
 
 	return nil
+}
+
+func (c *Client) Release(jobID state.JobID, clientID state.ClientID) error {
+	return fmt.Errorf("Unimplemented")
+}
+
+func (c *Client) Snapshot() (state.JSMSnapshot, error) {
+	return nil, fmt.Errorf("Unimplemented")
 }
 
 type reservationsQueue struct {
