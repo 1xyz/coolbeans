@@ -203,7 +203,7 @@ type JSM interface {
 		ttr int,
 		bodySize int,
 		body []byte,
-		tubeName TubeName) (Job, error)
+		tubeName TubeName) (JobID, error)
 
 	// Delete, removes a job specified by the id by a specific client
 	Delete(jobID JobID, clientID ClientID) error

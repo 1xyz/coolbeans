@@ -36,19 +36,10 @@ func TestLocalJSM_Put(t *testing.T) {
 		ttr := 2
 		body := []byte("hello")
 
-		j, err := jsm.Put(testNowSecs(), pri, e.delay, ttr, len(body), body, tubeName)
+		jID, err := jsm.Put(testNowSecs(), pri, e.delay, ttr, len(body), body, tubeName)
 
 		assert.Nilf(t, err, "expect err to be nil")
-		assert.NotNilf(t, j, "expect job to be not nil")
-		assert.Equalf(t, pri, j.Priority(), "expect pri to match")
-		assert.Equalf(t, e.delay, j.Delay(), "expect delay to match")
-		assert.Equalf(t, ttr, j.TTR(), "expect ttr to match")
-		assert.Equalf(t, body, j.Body(), "expect body to match")
-		assert.Equalf(t, len(body), j.BodySize(), "expect bodySize to match")
-
-		assert.Equalf(t, e.expectedState, j.State(), "expect state to be delayed")
-		assert.Equalf(t, ClientID(""), j.ReservedBy(), "expect job to be not-reserved")
-		assert.Equalf(t, expectedID, j.ID(), "expect id to match")
+		assert.Equalf(t, expectedID, jID, "expect id to match")
 	}
 }
 
@@ -459,7 +450,7 @@ func putTestJob(t *testing.T, jsm *localJSM, tubeName TubeName, hasDelay bool) J
 		delay = 10
 	}
 
-	j, err := jsm.Put(testNowSecs(), pri, delay, ttr, len(body), body, tubeName)
+	j, err := jsm.NewJob(testNowSecs(), pri, delay, ttr, len(body), body, tubeName)
 	if err != nil {
 		t.Fatalf("expected err to not be nil")
 	}

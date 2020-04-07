@@ -24,7 +24,7 @@ info:
 	@echo 
 	@echo "---------------------------------------------------------------" 
 
-build: clean fmt protoc
+build: clean fmt protoc test
 	$(GO) build -o bin/$(BINARY) -v main.go
 
 .PHONY: protoc

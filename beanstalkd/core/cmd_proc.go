@@ -209,13 +209,13 @@ func (c *cmdProcessor) put(cli *client, req *CmdRequest) *CmdResponse {
 		logc.Panicf("cast-error, cannot cast to *putCmd")
 	}
 
-	newJob, err := c.jsm.Put(nowSeconds(), cmd.pri, cmd.delay, cmd.ttr, cmd.size, cmd.data, cli.useTube)
+	newJobID, err := c.jsm.Put(nowSeconds(), cmd.pri, cmd.delay, cmd.ttr, cmd.size, cmd.data, cli.useTube)
 	if err != nil {
 		logc.Errorf("c.jsm.Put(...) err=%v", err)
 		resp.setResponse(MsgInternalError)
 	} else {
-		logc.Debugf("created job with id=%v", newJob.ID())
-		resp.setResponse(fmt.Sprintf("INSERTED %d", newJob.ID()))
+		logc.Debugf("created job with id=%v", newJobID)
+		resp.setResponse(fmt.Sprintf("INSERTED %d", newJobID))
 	}
 
 	return resp

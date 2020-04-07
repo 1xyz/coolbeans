@@ -346,14 +346,14 @@ func marshalP(m pb.Message) []byte {
 // //////////////////////////////////////////////////////////////////////
 
 func (f *fsm) ApplyPut(nowSecs int64, pReq *v1.PutRequest) (*v1.PutResponse, error) {
-	j, err := f.jsm.Put(nowSecs, pReq.Priority, pReq.Delay, int(pReq.Ttr),
+	jobID, err := f.jsm.Put(nowSecs, pReq.Priority, pReq.Delay, int(pReq.Ttr),
 		int(pReq.BodySize), pReq.Body, state.TubeName(pReq.TubeName))
 	if err != nil {
 		return nil, err
 	}
 
 	return &v1.PutResponse{
-		JobId: int64(j.ID()),
+		JobId: int64(jobID),
 	}, nil
 }
 

@@ -49,7 +49,7 @@ func TestPersist(t *testing.T) {
 func TestRestoreSnapshotTo(t *testing.T) {
 	jsm, _ := state.NewJSM()
 	resv := putNClientResvEntries(t, jsm, 5)
-	jobs := putNJobs(t, jsm, 7)
+	jobIDs := putNJobs(t, jsm, 7)
 
 	ss, _ := NewSnapshotFrom(jsm)
 	sink := newTestSink()
@@ -61,7 +61,7 @@ func TestRestoreSnapshotTo(t *testing.T) {
 	assert.Nilf(t, err, "expect err to be nil")
 
 	jsmSnap, _ := jsm2.Snapshot()
-	// Verify if the jobs match
+	// Verify if the jobIDs match
 	if jobCh, err := jsmSnap.SnapshotJobs(); err != nil {
 		t.Fatalf("jsmSnap.SnapshotJobs err=%v", err)
 	} else {
@@ -69,7 +69,7 @@ func TestRestoreSnapshotTo(t *testing.T) {
 		for _ = range jobCh {
 			count++
 		}
-		assert.Equalf(t, len(jobs), count, "expect job count to be %v", len(jobs))
+		assert.Equalf(t, len(jobIDs), count, "expect job count to be %v", len(jobIDs))
 	}
 
 	// Verif if the clientIDs match
@@ -102,16 +102,16 @@ func putNClientResvEntries(t *testing.T, jsm state.JSM, n int) []*state.Reservat
 	return testResv
 }
 
-func putNJobs(t *testing.T, jsm state.JSM, n int) []state.Job {
+func putNJobs(t *testing.T, jsm state.JSM, n int) []state.JobID {
 	now := testNowSecs()
 	body := "hello world"
-	testJobs := make([]state.Job, 0)
+	testJobs := make([]state.JobID, 0)
 	for i := 0; i < n; i++ {
-		job, err := jsm.Put(now, uint32(i), 0, 10, len(body), []byte(body), state.TubeName("foo"))
+		jobID, err := jsm.Put(now, uint32(i), 0, 10, len(body), []byte(body), state.TubeName("foo"))
 		if err != nil {
 			t.Fatalf("error in jsm.Put. err=%v", err)
 		} else {
-			testJobs = append(testJobs, job)
+			testJobs = append(testJobs, jobID)
 		}
 	}
 

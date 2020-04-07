@@ -69,6 +69,22 @@ func (jsm *localJSM) Put(nowSeconds int64,
 	ttr int,
 	bodySize int,
 	body []byte,
+	tubeName TubeName) (JobID, error) {
+
+	newJob, err := jsm.NewJob(nowSeconds, priority, delay, ttr, bodySize, body, tubeName)
+	if err != nil {
+		return JobID(0), err
+	} else {
+		return newJob.ID(), nil
+	}
+}
+
+func (jsm *localJSM) NewJob(nowSeconds int64,
+	priority uint32,
+	delay int64,
+	ttr int,
+	bodySize int,
+	body []byte,
 	tubeName TubeName) (Job, error) {
 
 	newJob := &localJob{
