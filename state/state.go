@@ -12,7 +12,10 @@ import (
 	"golang.org/x/net/context"
 )
 
-// Refers to the state of a job in beanstalkd context
+// JobState refers to the state of a job in beanstalkd context
+
+//go:generate stringer -type=JobState --output state_string.go
+
 type JobState int
 
 const (

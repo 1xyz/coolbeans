@@ -10,6 +10,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"io"
 	"io/ioutil"
 	"net"
@@ -226,13 +228,34 @@ func joinNode(LocalNC, remoteNC *NodeConfig, timeout time.Duration) error {
 	c := v1.NewClusterClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	req := &v1.JoinRequest{
-		NodeId: LocalNC.ID,
-		Addr:   LocalNC.RaftAddr}
-	if _, err := c.Join(ctx, req); err != nil {
-		return err
+
+	nRetry := 3
+	waitDuration := time.Second
+	for i := 0; i < nRetry; i++ {
+		req := &v1.JoinRequest{
+			NodeId: LocalNC.ID,
+			Addr:   LocalNC.RaftAddr}
+		_, err = c.Join(ctx, req)
+		if err != nil {
+			st, ok := status.FromError(err)
+			if !ok {
+				// Error was not a status error
+				return err
+			}
+
+			if st.Code() == codes.Unknown && st.Message() == "node is not the leader" {
+				log.Errorf("the current join node is not the leader")
+				time.Sleep(waitDuration)
+				waitDuration = waitDuration * 2
+				continue
+			}
+
+			break
+		} else {
+			log.Infof("join completed with no error")
+			break
+		}
 	}
 
-	log.Infof("Join completed successfully")
-	return nil
+	return err
 }

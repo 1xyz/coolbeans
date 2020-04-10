@@ -237,6 +237,8 @@ type ProxyLeaveReq struct {
 	proxyID string
 }
 
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . JsmTick
+
 type JsmTick interface {
 	Tick() (*v1.TickResponse, error)
 }
