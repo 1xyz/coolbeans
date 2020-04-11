@@ -4,6 +4,7 @@ GOREMAN=goreman
 PROTOC=protoc
 DELETE=rm
 BINARY=coolbeans
+BUILD_BINARY=bin/$(BINARY)
 # go source files, ignore vendor directory
 SRC = $(shell find . -type f -name '*.go' -not -path "./vendor/*")
 # current git version short-hash
@@ -16,7 +17,7 @@ info:
 	@echo " target         Description.                                   "
 	@echo "_______________________________________________________________"
 	@echo
-	@echo " build          generate a build target to local setup         "
+	@echo " build          generate a local build ⇨ $(BUILD_BINARY)      "
 	@echo " clean          clean up bin/ & go test cache                  "
 	@echo " fmt            format go code files using go fmt              "
 	@echo " generate       generate enum-strings & test-fakes go files    "
@@ -32,7 +33,7 @@ info:
 	@echo "_______________________________________________________________"
 
 build: clean fmt protoc test
-	$(GO) build -o bin/$(BINARY) -v main.go
+	$(GO) build -o $(BUILD_BINARY) -v main.go
 
 
 .PHONY: clean

@@ -1,33 +1,57 @@
-# Coolbeans
+<img src="doc/bean_3185124.svg" align=right width=300px />
 
-<img src="./doc/bean_3185124.svg" align="right" height="200" width="200" >
+- [Coolbeans](#coolbeans)
+    - [Setup](#setup)
+        - [Dependencies](#dependencies)
+        - [Building the binary](#building-the-binary)
+    - [Example usage](#example-usage)
+        - [Configuration](#configuration)
+        - [Usage](#usage-1)
+    - [Testing](#testing)
+        - [Dependencies](#dependencies)
+        - [Usage](#usage-2)
 
-Coolbeans is a lightweight distributed work queue based that uses the beanstalkd protocol.
 
+Coolbeans
+=========
 
-## Getting Started
+Coolbeans is a lightweight distributed work queue based that uses the [beanstalkd protocol](https://github.com/beanstalkd/beanstalkd/blob/master/doc/protocol.txt). 
 
-Coolbeans is  compiled as single statically linked binary, that can be obtained from the [releases]() page.
+Unlike a message queue, [beanstalkd](https://github.com/beanstalkd/beanstalkd) provides primtive operations to work with jobs. 
 
-### build and run the binary
+Coolbeans primarily differs from beanstalkd in that allows the work queue to be replicated across multiple machines.
 
-The [Makefile](./Makefile) provides different target options to build and run from source. To explore these options, run `make`
+Setup
+-----
 
-Example.
+This section walks through the process of building the source and running coolbeans.
 
-```
-# Generate a statically linked binary to the local environment
-$ make build
-..
+### Dependencies
 
-# Run a single node cluster. Note this spawns two processes, a cluster-node process and beanstalkd proxy.
-$ make run-single
-...
-go get github.com/mattn/goreman
-goreman -f Procfiles/dev.procfile start
+Coolbeans is written in golang, it requires go1.13 or newer. I prefer to use [go version manager](https://github.com/moovweb/gvm) to manage multiple go versions.
 
-```
+### Build & run the binary.
+
+The [Makefile](./Makefile) provides different target options to build and run from source. 
+
+To explore these options: 
+
+    `make`
+
+Generate a statically linked binary to the local environment:
+
+    make build
+
+Run a single node cluster. Note this spawns two processes, a cluster-node process and beanstalkd proxy.:
+
+    make run-single
+
+Releases
+--------
+
+Coolbeans is also released as a static binary, which can be downloaded from the [release pages](https://github.com/1xyz/coolbeans/releases)
 
 ---
 
 [icon](https://thenounproject.com/term/like/3185124/) by [Llisole](https://thenounproject.com/llisole/) from [the Noun Project](https://thenounproject.com)
+
