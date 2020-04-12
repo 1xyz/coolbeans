@@ -74,6 +74,11 @@ run-cluster:
 	$(GO) get github.com/mattn/goreman
 	$(GOREMAN) -f Procfiles/dev-cluster.procfile start
 
+.PHONY: run-beanstalkd
+run-beanstalkd:
+	$(GO) get github.com/mattn/goreman
+	$(GOREMAN) -f Procfiles/beanstalkd.procfile start
+
 
 # test w/ race detector on always
 # https://golang.org/doc/articles/race_detector.html#Typical_Data_Races

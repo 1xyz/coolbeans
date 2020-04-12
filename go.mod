@@ -3,6 +3,7 @@ module github.com/1xyz/coolbeans
 go 1.13
 
 require (
+	github.com/beanstalkd/go-beanstalk v0.0.0-20200229072127-2b7b37f17578
 	github.com/docopt/docopt-go v0.0.0-20180111231733-ee0de3bc6815
 	github.com/git-lfs/git-lfs v2.5.2+incompatible
 	github.com/golang/protobuf v1.3.5
