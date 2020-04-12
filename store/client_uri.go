@@ -2,7 +2,6 @@ package store
 
 import (
 	"errors"
-	"fmt"
 	"github.com/1xyz/coolbeans/state"
 	log "github.com/sirupsen/logrus"
 	"net/url"
@@ -12,10 +11,9 @@ import (
 const scheme = "client"
 
 var (
-	ErrInvalidURI             = errors.New("invalid uri")
-	ErrInvalidRequestFragment = errors.New("invalid request fragment")
-	ErrValidationFailed       = errors.New("uri validation failed")
-	ErrInvalidSchema          = errors.New("uri schema did not match or not present")
+	ErrInvalidURI       = errors.New("invalid uri")
+	ErrValidationFailed = errors.New("uri validation failed")
+	ErrInvalidSchema    = errors.New("uri schema did not match or not present")
 )
 
 type ClientURI struct {
@@ -42,13 +40,8 @@ func ParseClientURI(clientID state.ClientID) (*ClientURI, error) {
 		return nil, ErrInvalidSchema
 	}
 
-	req := strings.SplitN(u.RequestURI(), ":", 2)
-	if len(req) != 2 {
-		log.Errorf("invalid req framgement = %v", req)
-		return nil, ErrInvalidRequestFragment
-	}
-
-	c := NewClientURI(req[0], req[1])
+	q := u.Query()
+	c := NewClientURI(q.Get("proxy"), q.Get("client"))
 	if err := c.Validate(); err != nil {
 		return nil, err
 	}
@@ -66,5 +59,14 @@ func (c *ClientURI) Validate() error {
 }
 
 func (c *ClientURI) ToClientID() state.ClientID {
-	return state.ClientID(fmt.Sprintf("%s:%s:%s", scheme, c.proxyID, c.clientID))
+	baseUrl, err := url.Parse("client://id")
+	if err != nil {
+		log.Panicf("malformed url %v", err)
+	}
+
+	params := url.Values{}
+	params.Add("proxy", c.proxyID)
+	params.Add("client", c.clientID)
+	baseUrl.RawQuery = params.Encode()
+	return state.ClientID(baseUrl.String())
 }

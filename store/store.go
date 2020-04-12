@@ -427,16 +427,18 @@ func (f *fsm) ApplyReserve(nowSecs int64, req *v1.ReserveRequest) (*v1.ReserveRe
 }
 
 func (f *fsm) ApplyTick(nowSecs int64) (*v1.TickResponse, error) {
+	logc := log.WithField("method", "ApplyTick")
 	rs, err := f.jsm.Tick(nowSecs)
 	if err != nil {
-		log.WithField("method", "ApplyTick").
-			Errorf("jsm.AppendReservation. err=%v", err)
+		logc.Errorf("jsm.ApplyTick. err=%v", err)
 		return nil, err
 	}
 
 	// group the reservations by proxy id
 	proxyReservations := map[string]*v1.Reservations{}
+	logc.Infof("reservations == %v", len(rs))
 	for _, r := range rs {
+		logc.Infof("r = %v", r)
 		v1r, err := toV1Reservation(r)
 		if err != nil {
 			log.WithField("method", "ApplyTick").
@@ -470,6 +472,9 @@ func toV1Reservation(r *state.Reservation) (*v1.Reservation, error) {
 			Errorf("ParseClientURI clientID=%v err=%v", r.ClientId, err)
 		return nil, err
 	}
+
+	log.Errorf("proxyID = %v clientID=%v origclientID=%v",
+		cu.proxyID, cu.clientID, r.ClientId)
 
 	return &v1.Reservation{
 		RequestId: r.RequestId,

@@ -60,15 +60,15 @@ type cmdProcessor struct {
 }
 
 func (c *cmdProcessor) Run() {
-	ctxLog := log.WithFields(log.Fields{"method": "cmdProcessor.Run"})
+	logc := log.WithFields(log.Fields{"method": "cmdProcessor.Run"})
 	for {
 		select {
 		case <-c.newClientReqCh:
-			ctxLog.Debugf("Recv from newClientReqCh")
+			logc.Debugf("Recv from newClientReqCh")
 			nc := NewClient(defaultTubeName)
 			err := c.clients.Set(nc)
 			if err != nil {
-				ctxLog.Debugf("error c.client.Set(%v) err=%v", nc, err)
+				logc.Debugf("error c.client.Set(%v) err=%v", nc, err)
 			}
 			c.newClientRespCh <- ClientReg{
 				ID:         nc.id,
@@ -77,41 +77,39 @@ func (c *cmdProcessor) Run() {
 			}
 
 		case cmdRequest := <-c.cmdRequestCh:
-			ctxLog.Debugf("Recv cmdRequest %v from cmdRequestCh", cmdRequest)
+			logc.Debugf("Recv cmdRequest %v from cmdRequestCh", cmdRequest)
 			c.processRequest(&cmdRequest)
 
 		case <-c.ticker.C:
 			now := nowSeconds()
 			resv, err := c.jsm.Tick(now)
 			if err != nil {
-				ctxLog.Errorf("error = %v", err)
+				logc.Errorf("error = %v", err)
 			} else {
 				for _, r := range resv {
-					if r.Status != state.Matched {
-						ctxLog.Errorf("tick reservation status = %v", r.Status)
-						continue
-					}
+					logc.Infof("reservation = %v", r)
+					switch r.Status {
+					case state.Matched:
+						cli := c.clients[r.ClientId]
+						// send the header following by the body
+						sendCmdResponse(r.RequestId, cli,
+							[]byte(fmt.Sprintf("RESERVED %d %d", r.JobId, r.BodySize)), true)
+						sendCmdResponse(r.RequestId, cli, r.Body, false)
 
-					cli := c.clients[r.ClientId]
-					// reply to the client job metadata
-					cli.responseCh <- CmdResponse{
-						RequestID: r.RequestId,
-						ClientID:  cli.id,
-						Response:  []byte(fmt.Sprintf("RESERVED %d %d", r.JobId, r.BodySize)),
-						HasMore:   true,
-					}
-					// reply to the client job body
-					cli.responseCh <- CmdResponse{
-						RequestID: r.RequestId,
-						ClientID:  cli.id,
-						Response:  r.Body,
-						HasMore:   false,
+					case state.Timeout:
+						sendCmdResponse(r.RequestId, c.clients[r.ClientId], []byte(MsgTimedOut), false)
+					case state.DeadlineSoon:
+						sendCmdResponse(r.RequestId, c.clients[r.ClientId], []byte(MsgDeadlineSoon), false)
+					case state.Error:
+						sendCmdResponse(r.RequestId, c.clients[r.ClientId], []byte(MsgInternalError), false)
+					default:
+						logc.Errorf("Unsupported reservation status=%v", r.Status)
 					}
 				}
 			}
 
 		case <-c.shutdownCh:
-			ctxLog.Infof("shutdown signal for command processor")
+			logc.Infof("shutdown signal for command processor")
 			c.ticker.Stop()
 			close(c.newClientRespCh)
 			return
@@ -181,7 +179,7 @@ func (c *cmdProcessor) processRequest(req *CmdRequest) {
 		resp = c.quit(cli, req)
 		closeResp = true
 	default:
-		resp = NewCmdResponse(req)
+		resp = NewCmdResponseFromReq(req)
 		resp.setResponse(MsgUnknownCommand)
 	}
 
@@ -197,7 +195,7 @@ func (c *cmdProcessor) processRequest(req *CmdRequest) {
 
 func (c *cmdProcessor) put(cli *client, req *CmdRequest) *CmdResponse {
 	logc := logCtx(req, "cmdProcessor.put")
-	resp := NewCmdResponse(req)
+	resp := NewCmdResponseFromReq(req)
 	cmd, ok := req.cmd.(*putArg)
 	if !ok {
 		// Note: this is indicative of code-bug where the CmdType and cmd don't match up
@@ -218,7 +216,7 @@ func (c *cmdProcessor) put(cli *client, req *CmdRequest) *CmdResponse {
 
 func (c *cmdProcessor) delete(cli *client, req *CmdRequest) *CmdResponse {
 	ctxLog := logCtx(req, "cmdProcessor.delete")
-	resp := NewCmdResponse(req)
+	resp := NewCmdResponseFromReq(req)
 	cmd, ok := req.cmd.(*idArg)
 	if !ok {
 		// Note: this is indicative of code-bug where the CmdType and cmd don't match up
@@ -237,7 +235,7 @@ func (c *cmdProcessor) delete(cli *client, req *CmdRequest) *CmdResponse {
 
 func (c *cmdProcessor) ignore(cli *client, req *CmdRequest) *CmdResponse {
 	ctxLog := logCtx(req, "cmdProcessor.ignore")
-	resp := NewCmdResponse(req)
+	resp := NewCmdResponseFromReq(req)
 	cmd, ok := req.cmd.(*tubeArg)
 	if !ok {
 		// Note: this is indicative of code-bug where the CmdType and cmd don't match up
@@ -268,7 +266,7 @@ func (c *cmdProcessor) use(cli *client, req *CmdRequest) *CmdResponse {
 		ctxLog.Panicf("cast-error, cannot cast to *tubeCmd")
 	}
 
-	resp := NewCmdResponse(req)
+	resp := NewCmdResponseFromReq(req)
 	cli.useTube = cmd.tubeName
 	resp.setResponse(fmt.Sprintf("USING %s", cli.useTube))
 	return resp
@@ -276,7 +274,7 @@ func (c *cmdProcessor) use(cli *client, req *CmdRequest) *CmdResponse {
 
 func (c *cmdProcessor) watch(cli *client, req *CmdRequest) *CmdResponse {
 	ctxLog := logCtx(req, "cmdProcessor.watch")
-	resp := NewCmdResponse(req)
+	resp := NewCmdResponseFromReq(req)
 	cmd, ok := req.cmd.(*tubeArg)
 	if !ok {
 		// Note: this is indicative of code-bug where the CmdType and cmd don't match up
@@ -310,7 +308,7 @@ func (c *cmdProcessor) quit(cli *client, req *CmdRequest) *CmdResponse {
 		cli.watchingTubes = nil
 	}
 
-	return NewCmdResponse(req)
+	return NewCmdResponseFromReq(req)
 }
 
 func (c *cmdProcessor) reserveWithTimeout(cli *client, req *CmdRequest) *CmdResponse {
@@ -322,7 +320,7 @@ func (c *cmdProcessor) reserveWithTimeout(cli *client, req *CmdRequest) *CmdResp
 	}
 
 	if cmd.timeoutSeconds > MaxReservationTimeout {
-		resp := NewCmdResponse(req)
+		resp := NewCmdResponseFromReq(req)
 		resp.setResponse(MsgBadFormat)
 		return resp
 	}
@@ -433,7 +431,7 @@ type CmdResponse struct {
 	HasMore   bool
 }
 
-func NewCmdResponse(req *CmdRequest) *CmdResponse {
+func NewCmdResponseFromReq(req *CmdRequest) *CmdResponse {
 	return &CmdResponse{
 		RequestID: req.ID,
 		ClientID:  req.ClientID,
@@ -444,4 +442,13 @@ func NewCmdResponse(req *CmdRequest) *CmdResponse {
 
 func (c *CmdResponse) setResponse(s string) {
 	c.Response = []byte(s)
+}
+
+func sendCmdResponse(reqID string, cli *client, body []byte, hasMore bool) {
+	cli.responseCh <- CmdResponse{
+		RequestID: reqID,
+		ClientID:  cli.id,
+		Response:  body,
+		HasMore:   hasMore,
+	}
 }

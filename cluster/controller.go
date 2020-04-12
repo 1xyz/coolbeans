@@ -118,7 +118,7 @@ func (rctrl *ReservationsController) UnRegister(proxyID string, respCh <-chan *P
 //    connected.
 // 2) Processes any register (join) or un-register (leave) requests from proxies
 func (rctrl *ReservationsController) Run() error {
-	logc := log.WithField("method", "Run")
+	logc := log.WithField("method", "reservationsController.Run")
 
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
@@ -139,7 +139,7 @@ func (rctrl *ReservationsController) Run() error {
 				responded := make(map[string]bool)
 				for proxyId, reservation := range tickResp.ProxyReservations {
 					if respCh, ok := rctrl.connProxies[proxyId]; !ok {
-						log.Warnf("no entry with proxyID=%v discarding forwarding", proxyId)
+						logc.Warnf("no entry with proxyID=%v discarding forwarding", proxyId)
 					} else {
 						respCh <- &ProxyResp{
 							RespType:     Reservation,

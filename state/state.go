@@ -9,6 +9,7 @@
 package state
 
 import (
+	"fmt"
 	"golang.org/x/net/context"
 )
 
@@ -335,6 +336,8 @@ type JSMSnapshot interface {
 }
 
 // Refers to the Reservation Status of a Reservation
+
+// go:generate stringer -type=ReservationStatus --output state_string.go
 type ReservationStatus int
 
 const (
@@ -354,4 +357,9 @@ type Reservation struct {
 	BodySize  int
 	Body      []byte
 	Error     error
+}
+
+func (r Reservation) String() string {
+	return fmt.Sprintf("Reservation ReqID=%s ClientID=%v Status=%v JobID=%v Error=%v BodySize=%v",
+		r.RequestId, r.ClientId, r.Status, r.JobId, r.Error, r.BodySize)
 }
