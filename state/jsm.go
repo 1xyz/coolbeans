@@ -30,9 +30,6 @@ type localJSM struct {
 	// reservedJobs is a container of reserved jobs heaps indexed by CliID
 	reservedJobs reservedJobsIndex
 
-	// clock indicating when the next client needs processing
-	nextClientTickAt int64
-
 	// clock indicating when a the soonest delayed job is ready
 	nextDelayTickAt int64
 
@@ -41,14 +38,13 @@ type localJSM struct {
 
 func NewJSM() (JSM, error) {
 	return &localJSM{
-		maxJobID:         JobID(0),
-		jobs:             NewJobIndex(),
-		tubes:            make(tubeIndex),
-		clientHeap:       newClientResvHeap(),
-		clients:          newClientResvQueue(),
-		reservedJobs:     make(reservedJobsIndex),
-		nextDelayTickAt:  maxTime,
-		nextClientTickAt: maxTime,
+		maxJobID:        JobID(0),
+		jobs:            NewJobIndex(),
+		tubes:           make(tubeIndex),
+		clientHeap:      newClientResvHeap(),
+		clients:         newClientResvQueue(),
+		reservedJobs:    make(reservedJobsIndex),
+		nextDelayTickAt: maxTime,
 		stat: &procStats{
 			nResv:         0,
 			nResvOnDemand: 0,
@@ -396,10 +392,7 @@ func (jsm *localJSM) Tick(nowSecs int64) ([]*Reservation, error) {
 		res = append(res, r...)
 	}
 
-	if nowSecs > jsm.nextClientTickAt {
-		jsm.nextClientTickAt = maxTime
-		res = append(res, jsm.tickClients(nowSecs)...)
-	}
+	res = append(res, jsm.tickClients(nowSecs)...)
 
 	log.Infof("reserved %v viaTick=%v viaDemand=%v",
 		jsm.stat.nResv, jsm.stat.nResvOnTick, jsm.stat.nResvOnDemand)
@@ -597,10 +590,6 @@ func (jsm *localJSM) updateClientTickAt(cli *ClientResvEntry) {
 		cli.TickAt = nextTickAt
 	}
 
-	if nextTickAt < jsm.nextClientTickAt {
-		jsm.nextClientTickAt = nextTickAt
-	}
-
 	logc.Debugf("nextTickAt %v", time.Unix(nextTickAt, 0))
 }
 
@@ -620,11 +609,11 @@ func (jsm *localJSM) tickClients(nowSecs int64) []*Reservation {
 		lowestTickAt := jsm.clientHeap.Peek().TickAt
 		duration := time.Unix(nowSecs, 0).Sub(time.Unix(lowestTickAt, 0))
 		if nowSecs <= lowestTickAt {
-			logc.Debugf("now=%v <= lowestTickAt=%v skip processing duration=%v", nowSecs, lowestTickAt, duration)
+			logc.Infof("now=%v <= lowestTickAt=%v skip processing duration=%v", nowSecs, lowestTickAt, duration)
 			break
 		}
 
-		logc.Debugf("now=%v > lowestTickAt=%v continue processing", nowSecs, lowestTickAt)
+		logc.Infof("now=%v > lowestTickAt=%v continue processing", nowSecs, lowestTickAt)
 		cli := jsm.clientHeap.Dequeue()
 		if cli.IsWaitingForResv && nowSecs > cli.ResvDeadlineAt {
 			// Timeout -The client's reservation request deadline has passed
@@ -688,7 +677,7 @@ func (jsm *localJSM) tickClients(nowSecs int64) []*Reservation {
 		jsm.updateClientTickAt(cli)
 	}
 
-	logc.Debugf("nClients processed = %v", count)
+	logc.Infof("nClients processed = %v", count)
 	return result
 }
 

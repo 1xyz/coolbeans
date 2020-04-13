@@ -2,4 +2,4 @@
 cluster-node0: ./bin/coolbeans cluster-node --node-id bean0
 cluster-node1: ./bin/coolbeans cluster-node --node-id bean1 --join bean0
 cluster-node2: ./bin/coolbeans cluster-node --node-id bean2 --join bean0
-beanstalkd-0:  ./bin/coolbeans   beanstalkd -l 127.0.0.1 -j 127.0.0.1:11000 -p 9913
+beanstalkd-0:  ./bin/coolbeans   beanstalkd -l 127.0.0.1 -j 127.0.0.1:11000 -p 11300
