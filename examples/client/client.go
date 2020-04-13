@@ -1,3 +1,4 @@
+// Demo client CLI using the go-beanstalkd library
 package main
 
 import (
@@ -48,7 +49,7 @@ The commands are:
 	}
 
 	if err := runCommand(c, cmd, cmdArgs); err != nil {
-		fmt.Println(err)
+		log.Errorf("run command, err = %v", err)
 		os.Exit(1)
 	}
 }
@@ -82,7 +83,8 @@ example:
 
 	opts, err := docopt.ParseArgs(usage, argv[1:], "version")
 	if err != nil {
-		log.Fatalf("error parsing arguments. err=%v", err)
+		log.Errorf("error parsing arguments. err=%v", err)
+		return err
 	}
 
 	log.Debugf("args:...%v", opts)
@@ -140,7 +142,8 @@ example:
 
 	opts, err := docopt.ParseArgs(usage, argv[1:], "version")
 	if err != nil {
-		log.Fatalf("error parsing arguments. err=%v", err)
+		log.Errorf("error parsing arguments. err=%v", err)
+		return err
 	}
 
 	tube, err := opts.String("--tube")
@@ -179,13 +182,14 @@ example:
 
 	var id uint64
 	if t == nil {
+		// t == nil; indicates no specific tube is used the put call is made to the default tube (implicitly)
 		id, err = c.Put([]byte(body), uint32(pri), time.Duration(delay)*time.Second, time.Duration(ttr)*time.Second)
 	} else {
 		id, err = t.Put([]byte(body), uint32(pri), time.Duration(delay)*time.Second, time.Duration(ttr)*time.Second)
 	}
 
 	if err != nil {
-		log.Errorf("c.Put(...), error %v\n", err)
+		log.Errorf("Put(...), error %v\n", err)
 		return err
 	}
 

@@ -15,11 +15,11 @@
 Coolbeans
 =========
 
-Coolbeans is a lightweight distributed work queue based that uses the [beanstalkd protocol](https://github.com/beanstalkd/beanstalkd/blob/master/doc/protocol.txt). 
+Coolbeans is a lightweight distributed work queue that uses the [beanstalkd protocol](https://github.com/beanstalkd/beanstalkd/blob/master/doc/protocol.txt). 
 
-Unlike a message queue, [beanstalkd](https://github.com/beanstalkd/beanstalkd) provides primtive operations to work with jobs. 
+Unlike a message queue, [beanstalkd](https://github.com/beanstalkd/beanstalkd) provides primitive operations to work with jobs. 
 
-Coolbeans primarily differs from beanstalkd in that allows the work queue to be replicated across multiple machines.
+Coolbeans primarily differs from beanstalkd in that it allows the work queue to be replicated across multiple machines.
 
 Setup
 -----
@@ -28,7 +28,7 @@ This section walks through the process of building the source and running coolbe
 
 ### Dependencies
 
-Coolbeans is written in golang, it requires go1.13 or newer. I prefer to use [go version manager](https://github.com/moovweb/gvm) to manage multiple go versions.
+Coolbeans is written in golang, it requires go1.13 or newer. It is recommended to use [go version manager](https://github.com/moovweb/gvm) to manage multiple go versions.
 
 ### Build & run the binary.
 

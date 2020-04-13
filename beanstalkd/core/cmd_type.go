@@ -5,7 +5,7 @@ import (
 	"unicode/utf8"
 )
 
-// CmType refers to the type of command in beanstalkd context
+// CmdType refers to the type of command in beanstalkd context
 
 // go:generate stringer -type=CmdType --output cmd_type_string.go
 
