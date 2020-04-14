@@ -1,0 +1,7 @@
+version: "2"
+services:
+  bean0:
+    build: .
+    ports:
+      - "11000-23000"
+    command: ["/root/coolbeans", "cluster-node", "--node-id", "bean0"]

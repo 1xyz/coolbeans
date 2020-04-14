@@ -1,0 +1,30 @@
+{
+  "cluster": {
+    "name": "garbanzo-beans",
+    "in_mem": true,
+    "raft_timeout": "30s",
+    "restore_timeout": "30s",
+    "retain_snasphot_count": 2,
+    "max_pool": 3
+  },
+  "nodes": [
+    {
+      "id": "bean0",
+      "listen_addr": "0.0.0.0:11000",
+      "raft_addr": ":21000",
+      "root_dir": "/tmp/bean0"
+    },
+    {
+      "id": "bean1",
+      "listen_addr": ":12000",
+      "raft_addr": ":22000",
+      "root_dir": "/tmp/bean1"
+    },
+    {
+      "id": "bean2",
+      "listen_addr": ":13000",
+      "raft_addr": ":23000",
+      "root_dir": "/tmp/bean2"
+    }
+  ]
+}

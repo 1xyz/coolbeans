@@ -3,6 +3,7 @@ GOFMT=gofmt
 GOREMAN=goreman
 PROTOC=protoc
 DELETE=rm
+DOCKER=docker
 BINARY=coolbeans
 BUILD_BINARY=bin/$(BINARY)
 # go source files, ignore vendor directory
@@ -12,10 +13,8 @@ VER = $(shell git rev-parse --short HEAD)
 TAG = "$(BINARY):$(VER)"
 
 info:
-	@echo "___________________________________________________________________"
-	@echo
 	@echo " target         ⾖ Description.                                    "
-	@echo "___________________________________________________________________"
+	@echo " ----------------------------------------------------------------- "
 	@echo
 	@echo " build          generate a local build ⇨ $(BUILD_BINARY)          "
 	@echo " clean          clean up bin/ & go test cache                      "
@@ -24,15 +23,25 @@ info:
 	@echo " protoc         compile proto files to generate go files           "
 	@echo " release/darwin generate a darwin target build                     "
 	@echo " release/linux  generate a linux target build                      "
+	@echo " tidy           clean up go module file                            "
+	@echo
+	@echo " Run targets                                                       "
+	@echo " -----------"
 	@echo " run-single     run a single node cluster w/ beanstalkd proxy      "
 	@echo " run-cluster    run a three node cluster w/ beanstalkd proxy       "
 	@echo " run-beanstalkd run a single process beanstalkd                    "
+	@echo
+	@echo " Test targets                                                      "
+	@echo " -----------"
 	@echo " test           run unit-tests                                     "
 	@echo " testc          run unit-tests w/ coverage                         "
 	@echo " testv          run unit-tests verbose                             "
 	@echo " test-int       run integration-tests requires a running beanstalkd"
-	@echo " tidy           clean up go module file                            "
-	@echo "___________________________________________________________________"
+	@echo
+	@echo " Docker targets"
+	@echo " --------------"
+	@echo " docker-base   build the docker base image $(TAG)                  "
+	@echo " ------------------------------------------------------------------"
 
 build: clean fmt protoc
 	$(GO) build -o $(BUILD_BINARY) -v main.go
@@ -58,10 +67,13 @@ generate:
 
 .PHONY: protoc
 protoc:
-	$(PROTOC) -I api/v1 api/v1/*.proto --go_out=plugins=grpc:api/v1
+	$(GO) get -u github.com/golang/protobuf/protoc-gen-go
+	$(PROTOC) -I api/v1 api/v1/*.proto --go_out=plugins=grpc:api/v1 --go_opt=paths=source_relative
 
 
-release/%: clean fmt generate protoc tidy test
+release/%: clean fmt protoc
+	@echo "build no race on alpine. https://github.com/golang/go/issues/14481"
+	$(GO) test ./...
 	@echo "build GOOS: $(subst release/,,$@) & GOARCH: amd64"
 	GOOS=$(subst release/,,$@) GOARCH=amd64 $(GO) build -o bin/$(subst release/,,$@)/$(BINARY) -v main.go
 
@@ -107,3 +119,6 @@ test-int: build
 .PHONY: tidy
 tidy:
 	$(GO) mod tidy
+
+docker-build:
+	$(DOCKER) build -t $(TAG) -f docker/Dockerfile .

@@ -1,11 +1,11 @@
 package cluster_test
 
 import (
+	"errors"
 	"fmt"
 	v1 "github.com/1xyz/coolbeans/api/v1"
 	"github.com/1xyz/coolbeans/cluster"
 	"github.com/1xyz/coolbeans/cluster/clusterfakes"
-	"github.com/git-lfs/git-lfs/errors"
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"

@@ -2,4 +2,6 @@ syntax = "proto3";
 
 package coolbeans.api.v1;
 
+option go_package = ".;coolbeans_api_v1";
+
 message Empty{}
