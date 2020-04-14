@@ -1,0 +1,55 @@
+version: "3.7"
+
+services:
+  bean0:
+    build: .
+    ports:
+      - "127.0.0.1:11000:11000/tcp"
+    networks:
+      - cb_network
+    volumes:
+      - type: bind
+        source: ./compose/coolbeans-config.json
+        target: /root/cb-config.json
+    command: ["/root/coolbeans", "cluster-node",  "--config-file", "/root/cb-config.json", "--node-id", "bean0"]
+
+  bean1:
+    build: .
+    ports:
+      - "127.0.0.1:12000:12000/tcp"
+    networks:
+      - cb_network
+    volumes:
+      - type: bind
+        source: ./compose/coolbeans-config.json
+        target: /root/cb-config.json
+    command: ["/root/coolbeans", "cluster-node",  "--config-file", "/root/cb-config.json", "--node-id", "bean1", "--join", "bean0"]
+    depends_on:
+      - "bean0"
+
+  bean2:
+    build: .
+    ports:
+      - "127.0.0.1:13000:13000/tcp"
+    networks:
+      - cb_network
+    volumes:
+      - type: bind
+        source: ./compose/coolbeans-config.json
+        target: /root/cb-config.json
+    command: ["/root/coolbeans", "cluster-node",  "--config-file", "/root/cb-config.json", "--node-id", "bean2", "--join", "bean0"]
+    depends_on:
+      - "bean0"
+
+  beanstalkd-proxy0:
+    build: .
+    ports:
+      - "127.0.0.1:11300:11300/tcp"
+    networks:
+      - cb_network
+    command: ["/root/coolbeans", "beanstalkd",  "-p", "11300", "-j", "bean0:11000"]
+    depends_on:
+      - "bean0"
+
+networks:
+  cb_network:

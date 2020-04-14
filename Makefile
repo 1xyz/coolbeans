@@ -4,6 +4,7 @@ GOREMAN=goreman
 PROTOC=protoc
 DELETE=rm
 DOCKER=docker
+DOCKER_COMPOSE=docker-compose
 BINARY=coolbeans
 BUILD_BINARY=bin/$(BINARY)
 # go source files, ignore vendor directory
@@ -33,14 +34,16 @@ info:
 	@echo
 	@echo " Test targets                                                      "
 	@echo " -----------"
-	@echo " test           run unit-tests                                     "
-	@echo " testc          run unit-tests w/ coverage                         "
-	@echo " testv          run unit-tests verbose                             "
-	@echo " test-int       run integration-tests requires a running beanstalkd"
+	@echo " test       run unit-tests                                         "
+	@echo " testc      run unit-tests w/ coverage                             "
+	@echo " testv      run unit-tests verbose                                 "
+	@echo " test-int   run integration-tests requires a running beanstalkd    "
 	@echo
 	@echo " Docker targets"
 	@echo " --------------"
-	@echo " docker-base   build the docker base image $(TAG)                  "
+	@echo " docker-build        build the docker image $(TAG)                 "
+	@echo " docker-compose-up   run docker-compose-up                         "
+	@echo " docker-compose-down run docker-compose-down                       "
 	@echo " ------------------------------------------------------------------"
 
 build: clean fmt protoc
@@ -121,4 +124,10 @@ tidy:
 	$(GO) mod tidy
 
 docker-build:
-	$(DOCKER) build -t $(TAG) -f docker/Dockerfile .
+	$(DOCKER) build -t $(TAG) -f Dockerfile .
+
+docker-compose-up:
+	$(DOCKER_COMPOSE) --file compose/docker-compose.yml --project-directory . up
+
+docker-compose-down:
+	$(DOCKER_COMPOSE) --file compose/docker-compose.yml --project-directory . down

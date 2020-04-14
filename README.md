@@ -30,6 +30,8 @@ This section walks through the process of building the source and running coolbe
 
 Coolbeans is written in golang, it requires go1.13 or newer. It is recommended to use [go version manager](https://github.com/moovweb/gvm) to manage multiple go versions.
 
+Optionally, a Dockerfile and compose file is provided. This requires Docker ver 17 or newer. Refer [docker docs](https://docs.docker.com/) on how to install.
+
 ### Build & run the binary.
 
 The [Makefile](./Makefile) provides different target options to build and run from source. 
