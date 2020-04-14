@@ -305,7 +305,7 @@ func (jsm *localJSM) fromReadyToReserved(nowSeconds int64, jobID JobID, clientID
 const maxTimeoutSecs = 24 * 3600
 
 func (jsm *localJSM) AppendReservation(clientId ClientID, reqID string, watchedTubes []TubeName, nowSecs, resvDeadlineAt int64) (*Reservation, error) {
-	if resvDeadlineAt <= nowSecs || resvDeadlineAt > nowSecs+maxTimeoutSecs {
+	if resvDeadlineAt < nowSecs || resvDeadlineAt > nowSecs+maxTimeoutSecs {
 		// reservation timeout of infinity is not accepted
 		return nil, ErrInvalidResvTimeout
 	}

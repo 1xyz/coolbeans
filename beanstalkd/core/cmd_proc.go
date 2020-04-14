@@ -340,7 +340,13 @@ func (c *cmdProcessor) appendReservation(cli *client, reqID string, nowSecs, dea
 	}
 	resv, err := c.jsm.AppendReservation(cli.id, reqID, watchedTubes, nowSecs, deadlineAt)
 	if err != nil {
-		log.WithField("method", "appendReservation").Panicf("error %v", err)
+		log.WithField("method", "appendReservation").Errorf("error %v", err)
+		cli.responseCh <- CmdResponse{
+			RequestID: reqID,
+			ClientID:  cli.id,
+			Response:  []byte(MsgInternalError),
+			HasMore:   false,
+		}
 	} else if resv.Status == state.Matched {
 		// reply to the client job metadata
 		cli.responseCh <- CmdResponse{

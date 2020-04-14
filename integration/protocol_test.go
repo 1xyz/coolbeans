@@ -217,7 +217,30 @@ func TestProtocol_Reserve_Timeout(t *testing.T) {
 				t.Fatalf("timeout failed")
 			case err := <-errCh:
 				So(err, ShouldNotBeNil)
-				So(err.Error(), ShouldEqual, "reserve-with-timeout: timeout")
+				So(err.Error(), ShouldEqual, msgErrTimeout)
+			}
+		})
+	})
+
+	Convey("when a consumer reserves a tube with no jobs with a timeout of zero", t, func() {
+		tubeName := randStr(6)
+		tubes := beanstalk.NewTubeSet(newConn(t), tubeName)
+		defer tubes.Conn.Close()
+
+		Convey("the request times out immediately", func() {
+			errCh := make(chan error)
+			go func() {
+				_, _, err := tubes.Reserve(0 * time.Second)
+				errCh <- err
+				close(errCh)
+			}()
+
+			select {
+			case <-time.After(2 * time.Second):
+				t.Fatalf("timeout failed")
+			case err := <-errCh:
+				So(err, ShouldNotBeNil)
+				So(err.Error(), ShouldEqual, msgErrTimeout)
 			}
 		})
 	})
