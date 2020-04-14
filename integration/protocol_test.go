@@ -11,10 +11,12 @@ import (
 )
 
 const (
-	serverAddr     = "127.0.0.1:11300"
-	putTTR         = 10 * time.Second
-	reserveTimeout = 2 * time.Second
-	delay          = 5 * time.Second
+	serverAddr         = "127.0.0.1:11300"
+	putTTR             = 10 * time.Second
+	reserveTimeout     = 2 * time.Second
+	delay              = 5 * time.Second
+	msgErrTimeout      = "reserve-with-timeout: timeout"
+	msgErrDeadlineSoon = "reserve-with-timeout: deadline soon"
 )
 
 func TestProtocol_Put(t *testing.T) {
@@ -115,7 +117,7 @@ func TestProtocol_Put_Delayed_Reserve_Delete(t *testing.T) {
 			defer tubes.Conn.Close()
 			_, _, err := tubes.Reserve(delay / 2)
 			So(err, ShouldNotBeNil)
-			So(err.Error(), ShouldEqual, "reserve-with-timeout: timeout")
+			So(err.Error(), ShouldEqual, msgErrTimeout)
 		})
 
 		Convey("a consumer should be able to reserve it when delayed job becomes ready", func() {
@@ -190,7 +192,7 @@ func TestProtocol_Reserve_DeadlineSoon(t *testing.T) {
 			Convey("receives a deadline_soon for the next reserve in the last second of the ttr", func() {
 				_, _, err := tubes.Reserve(ttr)
 				So(err, ShouldNotBeNil)
-				So(err.Error(), ShouldEqual, "reserve-with-timeout: deadline soon")
+				So(err.Error(), ShouldEqual, msgErrDeadlineSoon)
 			})
 		})
 	})
