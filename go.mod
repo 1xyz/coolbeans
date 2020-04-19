@@ -11,6 +11,7 @@ require (
 	github.com/hashicorp/raft-boltdb v0.0.0-20191021154308-4207f1bf0617
 	github.com/mattn/goreman v0.3.5 // indirect
 	github.com/ory/go-acc v0.2.1
+	github.com/pkg/errors v0.8.1
 	github.com/sirupsen/logrus v1.5.0
 	github.com/smartystreets/goconvey v1.6.4
 	github.com/stretchr/testify v1.5.1

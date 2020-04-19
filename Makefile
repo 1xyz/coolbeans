@@ -126,6 +126,9 @@ tidy:
 docker-build:
 	$(DOCKER) build -t $(TAG) -f Dockerfile .
 
+docker-compose-build:
+	$(DOCKER_COMPOSE) --file compose/docker-compose.yml --project-directory . build
+
 docker-compose-up:
 	$(DOCKER_COMPOSE) --file compose/docker-compose.yml --project-directory . up
 

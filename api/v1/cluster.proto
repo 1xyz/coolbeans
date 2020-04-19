@@ -6,15 +6,27 @@ option go_package = ".;coolbeans_api_v1";
 
 import "empty.proto";
 
+// Service provides functionality to work with the cluster
 service Cluster {
-    // Request to join this cluster
+    // Join, allows a calling node to make a request to join
+    // this cluster.
+    //
+    // It is required that the node that this is called into is a leader node.
+    // Refer: the specific implementation for error codes
     rpc Join (JoinRequest) returns (Empty) {}
 
-    // Query the cluster for the current leader info
-    rpc LeaderInfo (Empty) returns (LeaderInfoResponse) {}
+    // Leave, allows a calling node to leave the cluster.
+    //
+    // It is required that the node that this is called into is a leader node.
+    // Refer: the specific implementation for error codes
+    rpc Leave (LeaveRequest) returns (Empty) {}
 
-    // Returns updates to any leader changes
-    rpc LeaderUpdates(Empty) returns (stream LeaderInfoResponse) {}
+    // IsNodeLeader, Check if this current node is a leader
+    rpc IsNodeLeader (Empty) returns (IsNodeLeaderResponse) {}
+
+    // Snaoshot, requests the server to return a user defined snapshot of
+    // the specific node.
+    rpc Snapshot (Empty) returns (Empty) {}
 }
 
 message JoinRequest {
@@ -25,10 +37,13 @@ message JoinRequest {
     string addr = 2;
 }
 
-message LeaderInfoResponse {
-    // Node ID of the leader
-    string leader_node_id = 1;
-
-    // Address of the leader
-    string leader_addr = 2;
+message LeaveRequest {
+    // Node ID of the node requested to leave
+    string node_id = 1;
 }
+
+message IsNodeLeaderResponse {
+    // is_leader is a boolean value indicating if this current node is a leader or not
+    bool is_leader = 1;
+}
+

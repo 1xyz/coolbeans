@@ -71,6 +71,9 @@ type ClusterConfig struct {
 		RestoreTimeout      Duration `json:"restore_timeout"`
 		RetainSnasphotCount int      `json:"retain_snasphot_count"`
 		MaxPool             int      `json:"max_pool"`
+		SnapshotThreshold   uint64   `json:"snapshot_threshold"`
+		TrailingLogs        uint64   `json:"trailing_logs"`
+		SnapshotInterval    Duration `json:"snapshot_interval"`
 	} `json:"cluster"`
 	// Node(s) specific configuration
 	Nodes []NodeConfig `json:"nodes"`
@@ -172,6 +175,9 @@ func runCoolbeans(c *ClusterConfig, nodeID string, joinID string) error {
 		RootDir:             nc.RootDir,
 		RaftBindAddr:        nc.RaftAddr,
 		Inmem:               c.Cluster.InMem,
+		SnapshotInterval:    time.Duration(c.Cluster.SnapshotInterval),
+		TrailingLogs:        c.Cluster.TrailingLogs,
+		SnapshotThreshold:   c.Cluster.SnapshotThreshold,
 	})
 	if err != nil {
 		return err
@@ -191,11 +197,12 @@ func runCoolbeans(c *ClusterConfig, nodeID string, joinID string) error {
 	if joinID != "" {
 		remoteNC, err := c.getNode(joinID)
 		if err != nil {
-			logc.Errorf("error getNode joinID=%v. err=%v", joinID, err)
+			logc.Errorf("c.getNode joinID=%v. err=%v", joinID, err)
 			return err
 		}
 
 		if err := joinNode(nc, remoteNC, time.Duration(c.Cluster.RaftTimeout)); err != nil {
+			logc.Errorf("joinNode err=%v", err)
 			return err
 		}
 	}
@@ -223,6 +230,7 @@ func joinNode(LocalNC, remoteNC *NodeConfig, timeout time.Duration) error {
 	if err != nil {
 		return fmt.Errorf("err grpc.Dial remote: %v. err: %v", remoteNC.ListenAddr, err)
 	}
+
 	defer conn.Close()
 
 	c := v1.NewClusterClient(conn)
@@ -231,31 +239,23 @@ func joinNode(LocalNC, remoteNC *NodeConfig, timeout time.Duration) error {
 
 	nRetry := 3
 	waitDuration := time.Second
+	req := &v1.JoinRequest{NodeId: LocalNC.ID, Addr: LocalNC.RaftAddr}
 	for i := 0; i < nRetry; i++ {
-		req := &v1.JoinRequest{
-			NodeId: LocalNC.ID,
-			Addr:   LocalNC.RaftAddr}
-		_, err = c.Join(ctx, req)
-		if err != nil {
+		if _, err = c.Join(ctx, req); err != nil {
 			st, ok := status.FromError(err)
-			if !ok {
-				// Error was not a status error
-				return err
-			}
-
-			if st.Code() == codes.Unknown && st.Message() == "node is not the leader" {
-				log.Errorf("the current join node is not the leader")
+			if ok && st.Code() == codes.FailedPrecondition && st.Message() == store.ErrNotRaftLeader.Error() {
+				log.Errorf("join failed at node err=%v. retrying attempt = %d", st.Message(), (i + 1))
 				time.Sleep(waitDuration)
 				waitDuration = waitDuration * 2
 				continue
 			}
 
-			break
-		} else {
-			log.Infof("join completed with no error")
-			break
+			return err
 		}
+
+		log.Infof("join completed sucessfully!")
+		break
 	}
 
-	return err
+	return nil
 }

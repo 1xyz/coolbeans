@@ -112,7 +112,7 @@ example:
 		return err
 	}
 
-	log.Infof("reserved job id=%v body=%v", id, body)
+	log.Infof("reserved job id=%v body=%v", id, len(body))
 
 	if !noDel {
 		if err := c.Delete(id); err != nil {

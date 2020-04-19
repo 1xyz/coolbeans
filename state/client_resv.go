@@ -250,7 +250,18 @@ func (c *clientResvQueue) Entries() <-chan *ClientResvEntry {
 	go func(ch chan<- *ClientResvEntry) {
 		defer close(ch)
 		for e := c.l.Front(); e != nil; e = e.Next() {
-			ch <- e.Value.(*ClientResvEntry)
+			cli, ok := e.Value.(*ClientResvEntry)
+			if !ok {
+				log.WithField("method", "clientResvQueue.Entries").
+					Panicf("class-cast error")
+			}
+
+			if cli.HeapIndex < 0 {
+				log.WithField("method", "clientResvQueue.Entries").
+					Warnf("cli %v with heapIndex = %v is skipped", cli.CliID, cli.HeapIndex)
+			} else {
+				ch <- cli
+			}
 		}
 	}(entriesCh)
 	return entriesCh

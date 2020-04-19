@@ -778,6 +778,7 @@ func (l *localSnapshot) SnapshotClients() (<-chan *ClientResvEntry, error) {
 }
 
 func (l *localSnapshot) RestoreClients(ctx context.Context, nClients int, entriesCh <-chan *ClientResvEntry) error {
+	logc := log.WithField("method", "RestoreClients")
 	l.clientHeap = newClientResvHeapWithSize(nClients)
 
 	for cli := range entriesCh {
@@ -788,7 +789,9 @@ func (l *localSnapshot) RestoreClients(ctx context.Context, nClients int, entrie
 			default:
 			}
 		}
+
 		if err := l.restoreClient(cli); err != nil {
+			logc.Panicf("l.restoreClient clientID=%v. err=%v", cli.CliID, err)
 			return err
 		}
 	}

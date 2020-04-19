@@ -1,6 +1,11 @@
+/*
+ * Package store provides an implementation for a accessing a Raft
+ * backed job state machine store
+ */
 package store
 
 import (
+	"errors"
 	"fmt"
 	v1 "github.com/1xyz/coolbeans/api/v1"
 	"github.com/1xyz/coolbeans/state"
@@ -15,12 +20,40 @@ import (
 	"time"
 )
 
+var (
+	// ErrRaftConfig is returned when an error is encountered retrieving
+	// the raft configuration.
+	ErrRaftConfig = errors.New("raft configuration error")
+
+	// ErrNodeNotLeader is returned, when the request requires the current
+	// node to be a leader to execute, but is a not a raft leader.
+	ErrNotRaftLeader = errors.New("node is not a raft leader")
+
+	// ErrNodeNotFound is returned. when the specified node is not found in raft configuration
+	ErrNodeNotFound = errors.New("node is not found in raft configuration")
+)
+
 type Config struct {
 	// retainSnapshotCount indicates the max, number of snapshots to retain
 	RetainSnasphotCount int
 
 	// The MaxPool controls how many connections we will pool. The
 	MaxPool int
+
+	// SnapshotThreshold controls how many outstanding logs there must be before
+	// we perform a snapshot. This is to prevent excessive snapshots when we can
+	// just replay a small set of logs.
+	SnapshotThreshold uint64
+
+	// TrailingLogs controls how many logs we leave after a snapshot. This is
+	// used so that we can quickly replay logs on a follower instead of being
+	// forced to send an entire snapshot.
+	TrailingLogs uint64
+
+	// SnapshotInterval controls how often we check if we should perform a snapshot.
+	// We randomly stagger between this value and 2x this value to avoid the entire
+	// cluster from performing a snapshot at once.
+	SnapshotInterval time.Duration
 
 	// RaftTimeout is the max. duration for a raft apply op.
 	// timeout is used to apply I/O deadlines. For InstallSnapshot, we multiply
@@ -54,8 +87,9 @@ func NewStore(c *Config) (*Store, error) {
 	}
 
 	return &Store{
-		jsm:  jsm,
-		c:    c,
+		jsm: jsm,
+		c:   c,
+
 		raft: nil,
 	}, nil
 }
@@ -70,6 +104,11 @@ func (s *Store) Open(enableSingle bool, localID string) error {
 	// Setup Raft configuration.
 	config := raft.DefaultConfig()
 	config.LocalID = raft.ServerID(localID)
+	config.SnapshotThreshold = s.c.SnapshotThreshold
+	config.TrailingLogs = s.c.TrailingLogs
+	config.SnapshotInterval = s.c.SnapshotInterval
+	log.Infof("Open: config localID %v, SnapshotThreshold=%v TrailingLogs=%v SnapshotInterval=%v",
+		config.LocalID, config.SnapshotThreshold, config.TrailingLogs, config.SnapshotInterval)
 
 	// Setup Raft communication.
 	addr, err := net.ResolveTCPAddr("tcp", s.c.RaftBindAddr)
@@ -129,49 +168,115 @@ func (s *Store) Open(enableSingle bool, localID string) error {
 
 // Join joins a node, identified by nodeID and located at addr, to this store.
 // The node must be ready to respond to Raft communications at that address.
+//
+// It is required that the node that this is called into is a leader node.
 func (s *Store) Join(nodeID, addr string) error {
-	logc := log.WithFields(log.Fields{
-		"method":  "Join",
-		"localID": s.localID})
+	logc := log.WithFields(log.Fields{"method": "Join", "localID": s.localID,
+		"nodeID": nodeID, "addr": addr})
 
-	logc.Infof("received join request for remote nodeID %s at addr:%s", nodeID, addr)
-	configFuture := s.raft.GetConfiguration()
-	if err := configFuture.Error(); err != nil {
-		logc.Errorf("failed to get raft configuration: %v", err)
+	rCfg, err := s.GetRaftConfiguration()
+	if err != nil {
 		return err
 	}
 
-	for _, srv := range configFuture.Configuration().Servers {
+	for _, srv := range rCfg.Servers {
 		// If a node already exists with either the joining node's ID or address,
 		// that node may need to be removed from the config first.
 		if srv.ID == raft.ServerID(nodeID) || srv.Address == raft.ServerAddress(addr) {
 			// However if *both* the ID and the address are the same, then nothing -- not even
 			// a join operation -- is needed.
 			if srv.Address == raft.ServerAddress(addr) && srv.ID == raft.ServerID(nodeID) {
-				logc.Warnf("node %s at %s already member of cluster, ignoring join request",
-					nodeID, addr)
+				logc.Warnf("node member of cluster, ignoring join request")
 				return nil
 			}
 
-			future := s.raft.RemoveServer(srv.ID, 0, 0)
-			if err := future.Error(); err != nil {
-				return fmt.Errorf("error removing existing node %s at %s: %s", nodeID, addr, err)
+			f := s.raft.RemoveServer(srv.ID, 0, s.c.RaftTimeout)
+			if err := f.Error(); err != nil {
+				if errors.Is(err, raft.ErrNotLeader) {
+					return fmt.Errorf("s.raft.RemoveServer(nodeId=%v, addr=%v); err = %v %w",
+						nodeID, addr, err, ErrNotRaftLeader)
+				}
+
+				return fmt.Errorf("s.raft.RemoveServer(nodeId=%v, addr=%v): err = %w",
+					nodeID, addr, err)
 			}
 		}
 	}
 
-	f := s.raft.AddVoter(raft.ServerID(nodeID), raft.ServerAddress(addr), 0, 0)
-	if f.Error() != nil {
-		logc.Errorf("s.raft.AddVoter. err = %v", f.Error())
-		return f.Error()
+	f := s.raft.AddVoter(raft.ServerID(nodeID), raft.ServerAddress(addr), 0, s.c.RaftTimeout)
+	if err := f.Error(); err != nil {
+		if errors.Is(err, raft.ErrNotLeader) {
+			return fmt.Errorf("s.raft.AddVoter(nodeId=%v, addr=%v); err = %v %w",
+				nodeID, addr, err, ErrNotRaftLeader)
+		}
+
+		return fmt.Errorf("s.raft.AddVoter(nodeId=%v, addr=%v): err = %w", nodeID, addr, err)
 	}
 
-	logc.Infof("node %s at %s joined successfully", nodeID, addr)
+	logc.Infof("joined successfully")
 	return nil
 }
 
 func (s *Store) IsLeader() bool {
 	return s.raft.State() == raft.Leader
+}
+
+// Leave, allows a node (specified by nodeID_ to leave the cluster.
+//
+// It is required that the node that this is called into is a leader node.
+func (s *Store) Leave(nodeID string) error {
+	logc := log.WithFields(log.Fields{"method": "Leave", "localID": s.localID, "nodeID": nodeID})
+
+	rCfg, err := s.GetRaftConfiguration()
+	if err != nil {
+		return err
+	}
+
+	serverID := raft.ServerID(nodeID)
+	logc = logc.WithField("serverID", serverID)
+	for _, srv := range rCfg.Servers {
+		if srv.ID == serverID {
+			logc.Infof("found a match. serverAddr=%v", srv.Address)
+			f := s.raft.RemoveServer(srv.ID, 0, s.c.RaftTimeout)
+			if err := f.Error(); err != nil {
+				if errors.Is(err, raft.ErrNotLeader) {
+					return fmt.Errorf("s.raft.RemoveServer(nodeId=%v, addr=%v); err = %v %w",
+						nodeID, srv.Address, err, ErrNotRaftLeader)
+				}
+
+				return fmt.Errorf("s.raft.RemoveServer(nodeId=%v, addr=%v); err = %w",
+					nodeID, srv.Address, err)
+			}
+
+			logc.Infof("s.raft.RemoveServer success")
+			return nil
+		}
+	}
+
+	return fmt.Errorf("nodeId=%v, err = %w", serverID, ErrNodeNotFound)
+}
+
+func (s *Store) GetRaftConfiguration() (*raft.Configuration, error) {
+	f := s.raft.GetConfiguration()
+	if err := f.Error(); err != nil {
+		log.Errorf("s.raft.GetConfiguration(). err=%v", err)
+		return nil, fmt.Errorf("s.raft.GetConfiguration reason = %v %w", err, ErrRaftConfig)
+	}
+
+	cfg := f.Configuration()
+	return &cfg, nil
+}
+
+func (s *Store) Snapshot() error {
+	logc := log.WithField("method", "Snapshot")
+
+	sf := s.raft.Snapshot()
+	if err := sf.Error(); err != nil {
+		logc.Errorf("s.raft.Snapshot(). err=%v", err)
+		return err
+	}
+
+	return nil
 }
 
 // //////////////////////////////////////////////////////////////////////

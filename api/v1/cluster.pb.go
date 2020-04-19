@@ -86,19 +86,17 @@ func (x *JoinRequest) GetAddr() string {
 	return ""
 }
 
-type LeaderInfoResponse struct {
+type LeaveRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// Node ID of the leader
-	LeaderNodeId string `protobuf:"bytes,1,opt,name=leader_node_id,json=leaderNodeId,proto3" json:"leader_node_id,omitempty"`
-	// Address of the leader
-	LeaderAddr string `protobuf:"bytes,2,opt,name=leader_addr,json=leaderAddr,proto3" json:"leader_addr,omitempty"`
+	// Node ID of the node requested to leave
+	NodeId string `protobuf:"bytes,1,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
 }
 
-func (x *LeaderInfoResponse) Reset() {
-	*x = LeaderInfoResponse{}
+func (x *LeaveRequest) Reset() {
+	*x = LeaveRequest{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_cluster_proto_msgTypes[1]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -106,13 +104,13 @@ func (x *LeaderInfoResponse) Reset() {
 	}
 }
 
-func (x *LeaderInfoResponse) String() string {
+func (x *LeaveRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*LeaderInfoResponse) ProtoMessage() {}
+func (*LeaveRequest) ProtoMessage() {}
 
-func (x *LeaderInfoResponse) ProtoReflect() protoreflect.Message {
+func (x *LeaveRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_cluster_proto_msgTypes[1]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -124,23 +122,64 @@ func (x *LeaderInfoResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use LeaderInfoResponse.ProtoReflect.Descriptor instead.
-func (*LeaderInfoResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use LeaveRequest.ProtoReflect.Descriptor instead.
+func (*LeaveRequest) Descriptor() ([]byte, []int) {
 	return file_cluster_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *LeaderInfoResponse) GetLeaderNodeId() string {
+func (x *LeaveRequest) GetNodeId() string {
 	if x != nil {
-		return x.LeaderNodeId
+		return x.NodeId
 	}
 	return ""
 }
 
-func (x *LeaderInfoResponse) GetLeaderAddr() string {
-	if x != nil {
-		return x.LeaderAddr
+type IsNodeLeaderResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	// is_leader is a boolean value indicating if this current node is a leader or not
+	IsLeader bool `protobuf:"varint,1,opt,name=is_leader,json=isLeader,proto3" json:"is_leader,omitempty"`
+}
+
+func (x *IsNodeLeaderResponse) Reset() {
+	*x = IsNodeLeaderResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_cluster_proto_msgTypes[2]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
 	}
-	return ""
+}
+
+func (x *IsNodeLeaderResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*IsNodeLeaderResponse) ProtoMessage() {}
+
+func (x *IsNodeLeaderResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_cluster_proto_msgTypes[2]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use IsNodeLeaderResponse.ProtoReflect.Descriptor instead.
+func (*IsNodeLeaderResponse) Descriptor() ([]byte, []int) {
+	return file_cluster_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *IsNodeLeaderResponse) GetIsLeader() bool {
+	if x != nil {
+		return x.IsLeader
+	}
+	return false
 }
 
 var File_cluster_proto protoreflect.FileDescriptor
@@ -152,30 +191,33 @@ var file_cluster_proto_rawDesc = []byte{
 	0x0a, 0x0b, 0x4a, 0x6f, 0x69, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x17, 0x0a,
 	0x07, 0x6e, 0x6f, 0x64, 0x65, 0x5f, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06,
 	0x6e, 0x6f, 0x64, 0x65, 0x49, 0x64, 0x12, 0x12, 0x0a, 0x04, 0x61, 0x64, 0x64, 0x72, 0x18, 0x02,
-	0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x61, 0x64, 0x64, 0x72, 0x22, 0x5b, 0x0a, 0x12, 0x4c, 0x65,
-	0x61, 0x64, 0x65, 0x72, 0x49, 0x6e, 0x66, 0x6f, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
-	0x12, 0x24, 0x0a, 0x0e, 0x6c, 0x65, 0x61, 0x64, 0x65, 0x72, 0x5f, 0x6e, 0x6f, 0x64, 0x65, 0x5f,
-	0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0c, 0x6c, 0x65, 0x61, 0x64, 0x65, 0x72,
-	0x4e, 0x6f, 0x64, 0x65, 0x49, 0x64, 0x12, 0x1f, 0x0a, 0x0b, 0x6c, 0x65, 0x61, 0x64, 0x65, 0x72,
-	0x5f, 0x61, 0x64, 0x64, 0x72, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0a, 0x6c, 0x65, 0x61,
-	0x64, 0x65, 0x72, 0x41, 0x64, 0x64, 0x72, 0x32, 0xee, 0x01, 0x0a, 0x07, 0x43, 0x6c, 0x75, 0x73,
-	0x74, 0x65, 0x72, 0x12, 0x40, 0x0a, 0x04, 0x4a, 0x6f, 0x69, 0x6e, 0x12, 0x1d, 0x2e, 0x63, 0x6f,
-	0x6f, 0x6c, 0x62, 0x65, 0x61, 0x6e, 0x73, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76, 0x31, 0x2e, 0x4a,
-	0x6f, 0x69, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x17, 0x2e, 0x63, 0x6f, 0x6f,
-	0x6c, 0x62, 0x65, 0x61, 0x6e, 0x73, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76, 0x31, 0x2e, 0x45, 0x6d,
-	0x70, 0x74, 0x79, 0x22, 0x00, 0x12, 0x4d, 0x0a, 0x0a, 0x4c, 0x65, 0x61, 0x64, 0x65, 0x72, 0x49,
-	0x6e, 0x66, 0x6f, 0x12, 0x17, 0x2e, 0x63, 0x6f, 0x6f, 0x6c, 0x62, 0x65, 0x61, 0x6e, 0x73, 0x2e,
-	0x61, 0x70, 0x69, 0x2e, 0x76, 0x31, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x1a, 0x24, 0x2e, 0x63,
+	0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x61, 0x64, 0x64, 0x72, 0x22, 0x27, 0x0a, 0x0c, 0x4c, 0x65,
+	0x61, 0x76, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x17, 0x0a, 0x07, 0x6e, 0x6f,
+	0x64, 0x65, 0x5f, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x6e, 0x6f, 0x64,
+	0x65, 0x49, 0x64, 0x22, 0x33, 0x0a, 0x14, 0x49, 0x73, 0x4e, 0x6f, 0x64, 0x65, 0x4c, 0x65, 0x61,
+	0x64, 0x65, 0x72, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x1b, 0x0a, 0x09, 0x69,
+	0x73, 0x5f, 0x6c, 0x65, 0x61, 0x64, 0x65, 0x72, 0x18, 0x01, 0x20, 0x01, 0x28, 0x08, 0x52, 0x08,
+	0x69, 0x73, 0x4c, 0x65, 0x61, 0x64, 0x65, 0x72, 0x32, 0xa2, 0x02, 0x0a, 0x07, 0x43, 0x6c, 0x75,
+	0x73, 0x74, 0x65, 0x72, 0x12, 0x40, 0x0a, 0x04, 0x4a, 0x6f, 0x69, 0x6e, 0x12, 0x1d, 0x2e, 0x63,
 	0x6f, 0x6f, 0x6c, 0x62, 0x65, 0x61, 0x6e, 0x73, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76, 0x31, 0x2e,
-	0x4c, 0x65, 0x61, 0x64, 0x65, 0x72, 0x49, 0x6e, 0x66, 0x6f, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
-	0x73, 0x65, 0x22, 0x00, 0x12, 0x52, 0x0a, 0x0d, 0x4c, 0x65, 0x61, 0x64, 0x65, 0x72, 0x55, 0x70,
-	0x64, 0x61, 0x74, 0x65, 0x73, 0x12, 0x17, 0x2e, 0x63, 0x6f, 0x6f, 0x6c, 0x62, 0x65, 0x61, 0x6e,
-	0x73, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76, 0x31, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x1a, 0x24,
-	0x2e, 0x63, 0x6f, 0x6f, 0x6c, 0x62, 0x65, 0x61, 0x6e, 0x73, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76,
-	0x31, 0x2e, 0x4c, 0x65, 0x61, 0x64, 0x65, 0x72, 0x49, 0x6e, 0x66, 0x6f, 0x52, 0x65, 0x73, 0x70,
-	0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x30, 0x01, 0x42, 0x14, 0x5a, 0x12, 0x2e, 0x3b, 0x63, 0x6f,
-	0x6f, 0x6c, 0x62, 0x65, 0x61, 0x6e, 0x73, 0x5f, 0x61, 0x70, 0x69, 0x5f, 0x76, 0x31, 0x62, 0x06,
-	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x4a, 0x6f, 0x69, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x17, 0x2e, 0x63, 0x6f,
+	0x6f, 0x6c, 0x62, 0x65, 0x61, 0x6e, 0x73, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76, 0x31, 0x2e, 0x45,
+	0x6d, 0x70, 0x74, 0x79, 0x22, 0x00, 0x12, 0x42, 0x0a, 0x05, 0x4c, 0x65, 0x61, 0x76, 0x65, 0x12,
+	0x1e, 0x2e, 0x63, 0x6f, 0x6f, 0x6c, 0x62, 0x65, 0x61, 0x6e, 0x73, 0x2e, 0x61, 0x70, 0x69, 0x2e,
+	0x76, 0x31, 0x2e, 0x4c, 0x65, 0x61, 0x76, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a,
+	0x17, 0x2e, 0x63, 0x6f, 0x6f, 0x6c, 0x62, 0x65, 0x61, 0x6e, 0x73, 0x2e, 0x61, 0x70, 0x69, 0x2e,
+	0x76, 0x31, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x22, 0x00, 0x12, 0x51, 0x0a, 0x0c, 0x49, 0x73,
+	0x4e, 0x6f, 0x64, 0x65, 0x4c, 0x65, 0x61, 0x64, 0x65, 0x72, 0x12, 0x17, 0x2e, 0x63, 0x6f, 0x6f,
+	0x6c, 0x62, 0x65, 0x61, 0x6e, 0x73, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76, 0x31, 0x2e, 0x45, 0x6d,
+	0x70, 0x74, 0x79, 0x1a, 0x26, 0x2e, 0x63, 0x6f, 0x6f, 0x6c, 0x62, 0x65, 0x61, 0x6e, 0x73, 0x2e,
+	0x61, 0x70, 0x69, 0x2e, 0x76, 0x31, 0x2e, 0x49, 0x73, 0x4e, 0x6f, 0x64, 0x65, 0x4c, 0x65, 0x61,
+	0x64, 0x65, 0x72, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x3e, 0x0a,
+	0x08, 0x53, 0x6e, 0x61, 0x70, 0x73, 0x68, 0x6f, 0x74, 0x12, 0x17, 0x2e, 0x63, 0x6f, 0x6f, 0x6c,
+	0x62, 0x65, 0x61, 0x6e, 0x73, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76, 0x31, 0x2e, 0x45, 0x6d, 0x70,
+	0x74, 0x79, 0x1a, 0x17, 0x2e, 0x63, 0x6f, 0x6f, 0x6c, 0x62, 0x65, 0x61, 0x6e, 0x73, 0x2e, 0x61,
+	0x70, 0x69, 0x2e, 0x76, 0x31, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x22, 0x00, 0x42, 0x14, 0x5a,
+	0x12, 0x2e, 0x3b, 0x63, 0x6f, 0x6f, 0x6c, 0x62, 0x65, 0x61, 0x6e, 0x73, 0x5f, 0x61, 0x70, 0x69,
+	0x5f, 0x76, 0x31, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -190,21 +232,24 @@ func file_cluster_proto_rawDescGZIP() []byte {
 	return file_cluster_proto_rawDescData
 }
 
-var file_cluster_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_cluster_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_cluster_proto_goTypes = []interface{}{
-	(*JoinRequest)(nil),        // 0: coolbeans.api.v1.JoinRequest
-	(*LeaderInfoResponse)(nil), // 1: coolbeans.api.v1.LeaderInfoResponse
-	(*Empty)(nil),              // 2: coolbeans.api.v1.Empty
+	(*JoinRequest)(nil),          // 0: coolbeans.api.v1.JoinRequest
+	(*LeaveRequest)(nil),         // 1: coolbeans.api.v1.LeaveRequest
+	(*IsNodeLeaderResponse)(nil), // 2: coolbeans.api.v1.IsNodeLeaderResponse
+	(*Empty)(nil),                // 3: coolbeans.api.v1.Empty
 }
 var file_cluster_proto_depIdxs = []int32{
 	0, // 0: coolbeans.api.v1.Cluster.Join:input_type -> coolbeans.api.v1.JoinRequest
-	2, // 1: coolbeans.api.v1.Cluster.LeaderInfo:input_type -> coolbeans.api.v1.Empty
-	2, // 2: coolbeans.api.v1.Cluster.LeaderUpdates:input_type -> coolbeans.api.v1.Empty
-	2, // 3: coolbeans.api.v1.Cluster.Join:output_type -> coolbeans.api.v1.Empty
-	1, // 4: coolbeans.api.v1.Cluster.LeaderInfo:output_type -> coolbeans.api.v1.LeaderInfoResponse
-	1, // 5: coolbeans.api.v1.Cluster.LeaderUpdates:output_type -> coolbeans.api.v1.LeaderInfoResponse
-	3, // [3:6] is the sub-list for method output_type
-	0, // [0:3] is the sub-list for method input_type
+	1, // 1: coolbeans.api.v1.Cluster.Leave:input_type -> coolbeans.api.v1.LeaveRequest
+	3, // 2: coolbeans.api.v1.Cluster.IsNodeLeader:input_type -> coolbeans.api.v1.Empty
+	3, // 3: coolbeans.api.v1.Cluster.Snapshot:input_type -> coolbeans.api.v1.Empty
+	3, // 4: coolbeans.api.v1.Cluster.Join:output_type -> coolbeans.api.v1.Empty
+	3, // 5: coolbeans.api.v1.Cluster.Leave:output_type -> coolbeans.api.v1.Empty
+	2, // 6: coolbeans.api.v1.Cluster.IsNodeLeader:output_type -> coolbeans.api.v1.IsNodeLeaderResponse
+	3, // 7: coolbeans.api.v1.Cluster.Snapshot:output_type -> coolbeans.api.v1.Empty
+	4, // [4:8] is the sub-list for method output_type
+	0, // [0:4] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
@@ -230,7 +275,19 @@ func file_cluster_proto_init() {
 			}
 		}
 		file_cluster_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*LeaderInfoResponse); i {
+			switch v := v.(*LeaveRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_cluster_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*IsNodeLeaderResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -248,7 +305,7 @@ func file_cluster_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_cluster_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
@@ -274,12 +331,22 @@ const _ = grpc.SupportPackageIsVersion6
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type ClusterClient interface {
-	// Request to join this cluster
+	// Join, allows a calling node to make a request to join
+	// this cluster.
+	//
+	// It is required that the node that this is called into is a leader node.
+	// Refer: the specific implementation for error codes
 	Join(ctx context.Context, in *JoinRequest, opts ...grpc.CallOption) (*Empty, error)
-	// Query the cluster for the current leader info
-	LeaderInfo(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*LeaderInfoResponse, error)
-	// Returns updates to any leader changes
-	LeaderUpdates(ctx context.Context, in *Empty, opts ...grpc.CallOption) (Cluster_LeaderUpdatesClient, error)
+	// Leave, allows a calling node to leave the cluster.
+	//
+	// It is required that the node that this is called into is a leader node.
+	// Refer: the specific implementation for error codes
+	Leave(ctx context.Context, in *LeaveRequest, opts ...grpc.CallOption) (*Empty, error)
+	// IsNodeLeader, Check if this current node is a leader
+	IsNodeLeader(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*IsNodeLeaderResponse, error)
+	// Snaoshot, requests the server to return a user defined snapshot of
+	// the specific node.
+	Snapshot(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error)
 }
 
 type clusterClient struct {
@@ -299,55 +366,51 @@ func (c *clusterClient) Join(ctx context.Context, in *JoinRequest, opts ...grpc.
 	return out, nil
 }
 
-func (c *clusterClient) LeaderInfo(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*LeaderInfoResponse, error) {
-	out := new(LeaderInfoResponse)
-	err := c.cc.Invoke(ctx, "/coolbeans.api.v1.Cluster/LeaderInfo", in, out, opts...)
+func (c *clusterClient) Leave(ctx context.Context, in *LeaveRequest, opts ...grpc.CallOption) (*Empty, error) {
+	out := new(Empty)
+	err := c.cc.Invoke(ctx, "/coolbeans.api.v1.Cluster/Leave", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *clusterClient) LeaderUpdates(ctx context.Context, in *Empty, opts ...grpc.CallOption) (Cluster_LeaderUpdatesClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_Cluster_serviceDesc.Streams[0], "/coolbeans.api.v1.Cluster/LeaderUpdates", opts...)
+func (c *clusterClient) IsNodeLeader(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*IsNodeLeaderResponse, error) {
+	out := new(IsNodeLeaderResponse)
+	err := c.cc.Invoke(ctx, "/coolbeans.api.v1.Cluster/IsNodeLeader", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &clusterLeaderUpdatesClient{stream}
-	if err := x.ClientStream.SendMsg(in); err != nil {
-		return nil, err
-	}
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
-	}
-	return x, nil
+	return out, nil
 }
 
-type Cluster_LeaderUpdatesClient interface {
-	Recv() (*LeaderInfoResponse, error)
-	grpc.ClientStream
-}
-
-type clusterLeaderUpdatesClient struct {
-	grpc.ClientStream
-}
-
-func (x *clusterLeaderUpdatesClient) Recv() (*LeaderInfoResponse, error) {
-	m := new(LeaderInfoResponse)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
+func (c *clusterClient) Snapshot(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error) {
+	out := new(Empty)
+	err := c.cc.Invoke(ctx, "/coolbeans.api.v1.Cluster/Snapshot", in, out, opts...)
+	if err != nil {
 		return nil, err
 	}
-	return m, nil
+	return out, nil
 }
 
 // ClusterServer is the server API for Cluster service.
 type ClusterServer interface {
-	// Request to join this cluster
+	// Join, allows a calling node to make a request to join
+	// this cluster.
+	//
+	// It is required that the node that this is called into is a leader node.
+	// Refer: the specific implementation for error codes
 	Join(context.Context, *JoinRequest) (*Empty, error)
-	// Query the cluster for the current leader info
-	LeaderInfo(context.Context, *Empty) (*LeaderInfoResponse, error)
-	// Returns updates to any leader changes
-	LeaderUpdates(*Empty, Cluster_LeaderUpdatesServer) error
+	// Leave, allows a calling node to leave the cluster.
+	//
+	// It is required that the node that this is called into is a leader node.
+	// Refer: the specific implementation for error codes
+	Leave(context.Context, *LeaveRequest) (*Empty, error)
+	// IsNodeLeader, Check if this current node is a leader
+	IsNodeLeader(context.Context, *Empty) (*IsNodeLeaderResponse, error)
+	// Snaoshot, requests the server to return a user defined snapshot of
+	// the specific node.
+	Snapshot(context.Context, *Empty) (*Empty, error)
 }
 
 // UnimplementedClusterServer can be embedded to have forward compatible implementations.
@@ -357,11 +420,14 @@ type UnimplementedClusterServer struct {
 func (*UnimplementedClusterServer) Join(context.Context, *JoinRequest) (*Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Join not implemented")
 }
-func (*UnimplementedClusterServer) LeaderInfo(context.Context, *Empty) (*LeaderInfoResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method LeaderInfo not implemented")
+func (*UnimplementedClusterServer) Leave(context.Context, *LeaveRequest) (*Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Leave not implemented")
 }
-func (*UnimplementedClusterServer) LeaderUpdates(*Empty, Cluster_LeaderUpdatesServer) error {
-	return status.Errorf(codes.Unimplemented, "method LeaderUpdates not implemented")
+func (*UnimplementedClusterServer) IsNodeLeader(context.Context, *Empty) (*IsNodeLeaderResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method IsNodeLeader not implemented")
+}
+func (*UnimplementedClusterServer) Snapshot(context.Context, *Empty) (*Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Snapshot not implemented")
 }
 
 func RegisterClusterServer(s *grpc.Server, srv ClusterServer) {
@@ -386,43 +452,58 @@ func _Cluster_Join_Handler(srv interface{}, ctx context.Context, dec func(interf
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Cluster_LeaderInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Cluster_Leave_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LeaveRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ClusterServer).Leave(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/coolbeans.api.v1.Cluster/Leave",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ClusterServer).Leave(ctx, req.(*LeaveRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Cluster_IsNodeLeader_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ClusterServer).LeaderInfo(ctx, in)
+		return srv.(ClusterServer).IsNodeLeader(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/coolbeans.api.v1.Cluster/LeaderInfo",
+		FullMethod: "/coolbeans.api.v1.Cluster/IsNodeLeader",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ClusterServer).LeaderInfo(ctx, req.(*Empty))
+		return srv.(ClusterServer).IsNodeLeader(ctx, req.(*Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Cluster_LeaderUpdates_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(Empty)
-	if err := stream.RecvMsg(m); err != nil {
-		return err
+func _Cluster_Snapshot_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Empty)
+	if err := dec(in); err != nil {
+		return nil, err
 	}
-	return srv.(ClusterServer).LeaderUpdates(m, &clusterLeaderUpdatesServer{stream})
-}
-
-type Cluster_LeaderUpdatesServer interface {
-	Send(*LeaderInfoResponse) error
-	grpc.ServerStream
-}
-
-type clusterLeaderUpdatesServer struct {
-	grpc.ServerStream
-}
-
-func (x *clusterLeaderUpdatesServer) Send(m *LeaderInfoResponse) error {
-	return x.ServerStream.SendMsg(m)
+	if interceptor == nil {
+		return srv.(ClusterServer).Snapshot(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/coolbeans.api.v1.Cluster/Snapshot",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ClusterServer).Snapshot(ctx, req.(*Empty))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 var _Cluster_serviceDesc = grpc.ServiceDesc{
@@ -434,16 +515,18 @@ var _Cluster_serviceDesc = grpc.ServiceDesc{
 			Handler:    _Cluster_Join_Handler,
 		},
 		{
-			MethodName: "LeaderInfo",
-			Handler:    _Cluster_LeaderInfo_Handler,
+			MethodName: "Leave",
+			Handler:    _Cluster_Leave_Handler,
 		},
-	},
-	Streams: []grpc.StreamDesc{
 		{
-			StreamName:    "LeaderUpdates",
-			Handler:       _Cluster_LeaderUpdates_Handler,
-			ServerStreams: true,
+			MethodName: "IsNodeLeader",
+			Handler:    _Cluster_IsNodeLeader_Handler,
+		},
+		{
+			MethodName: "Snapshot",
+			Handler:    _Cluster_Snapshot_Handler,
 		},
 	},
+	Streams:  []grpc.StreamDesc{},
 	Metadata: "cluster.proto",
 }
