@@ -11,6 +11,7 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	healthgrpc "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/status"
 	"io"
 	"io/ioutil"
@@ -215,6 +216,8 @@ func runCoolbeans(c *ClusterConfig, nodeID string, joinID string) error {
 	v1.RegisterJobStateMachineServer(grpcServer,
 		jsmServer)
 	go jsmServer.RunController()
+	healthgrpc.RegisterHealthServer(grpcServer,
+		cluster.NewHealthCheckServer(s))
 
 	logc.Infof("tcp server listen on %v", nc.ListenAddr)
 	lis, err := net.Listen("tcp", nc.ListenAddr)

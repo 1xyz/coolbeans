@@ -221,6 +221,10 @@ func (s *Store) IsLeader() bool {
 	return s.raft.State() == raft.Leader
 }
 
+func (s *Store) Ready() bool {
+	return s.IsLeader()
+}
+
 // Leave, allows a node (specified by nodeID_ to leave the cluster.
 //
 // It is required that the node that this is called into is a leader node.
@@ -401,6 +405,12 @@ func (f *fsm) Apply(l *raft.Log) interface{} {
 		tResp, err := f.ApplyTick(applyReq.NowSecs)
 		return newApplyRespBytes(tResp, err)
 
+	case v1.OpType_CHECK_CLIENT_STATE:
+		var chkReq v1.CheckClientStateRequest
+		unmarshalP(applyReq.Body, &chkReq)
+		chkResp, err := f.ApplyCheckState(applyReq.NowSecs, &chkReq)
+		return newApplyRespBytes(chkResp, err)
+
 	default:
 		return marshalP(&v1.ApplyOpResponse{
 			ErrorCode:    v1.ResultCode_Unimplemented,
@@ -551,6 +561,9 @@ func (f *fsm) ApplyTick(nowSecs int64) (*v1.TickResponse, error) {
 			return nil, err
 		}
 
+		log.Infof("ApplyTick: proxyId = %v, clientId=%v status=%v",
+			v1r.ProxyId, v1r.ClientId, v1r.Status)
+
 		if resvns, ok := proxyReservations[v1r.ProxyId]; !ok {
 			proxyReservations[v1r.ProxyId] = &v1.Reservations{
 				Entries: []*v1.Reservation{v1r},
@@ -578,8 +591,8 @@ func toV1Reservation(r *state.Reservation) (*v1.Reservation, error) {
 		return nil, err
 	}
 
-	log.Errorf("proxyID = %v clientID=%v origclientID=%v",
-		cu.proxyID, cu.clientID, r.ClientId)
+	log.Infof("toV1Reservation: proxyID = %v clientID=%v origclientID=%v status = %v",
+		cu.proxyID, cu.clientID, r.ClientId, r.Status)
 
 	return &v1.Reservation{
 		RequestId: r.RequestId,
@@ -591,4 +604,61 @@ func toV1Reservation(r *state.Reservation) (*v1.Reservation, error) {
 		Body:      r.Body,
 		ErrorMsg:  errMsg,
 	}, nil
+}
+
+func (f *fsm) ApplyCheckState(nowSecs int64, req *v1.CheckClientStateRequest) (*v1.CheckClientStateResponse, error) {
+	logc := log.WithField("method", "ApplyCheckState")
+	clientIDs := make([]state.ClientID, 0)
+	for _, id := range req.ClientIds {
+		cu := NewClientURI(req.ProxyId, id)
+		if err := cu.Validate(); err != nil {
+			logc.Errorf("clientUri.validate %v", err)
+			return nil, err
+		}
+
+		clientIDs = append(clientIDs, cu.ToClientID())
+	}
+
+	w, nw, m, err := f.jsm.CheckClientState(clientIDs)
+	if err != nil {
+		logc.Errorf("f.jsm.CheckClisntState err = %v", err)
+		return nil, err
+	}
+
+	missing, err := ToStrings(m)
+	if err != nil {
+		return nil, err
+	}
+
+	waiting, err := ToStrings(w)
+	if err != nil {
+		return nil, err
+	}
+
+	notWaiting, err := ToStrings(nw)
+	if err != nil {
+		return nil, err
+	}
+
+	return &v1.CheckClientStateResponse{
+		ProxyId:             req.ProxyId,
+		WaitingClientIds:    waiting,
+		NotWaitingClientIds: notWaiting,
+		MissingClientIds:    missing,
+	}, nil
+}
+
+func ToStrings(clientIds []state.ClientID) ([]string, error) {
+	s := make([]string, 0)
+	for _, c := range clientIds {
+		cu, err := ParseClientURI(c)
+		if err != nil {
+			log.Errorf("ToString: clientID=%v err=%v", c, err)
+			return nil, err
+		}
+
+		s = append(s, cu.clientID)
+	}
+
+	return s, nil
 }

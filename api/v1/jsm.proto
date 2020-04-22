@@ -23,7 +23,10 @@ service JobStateMachine {
     // StreamReserveUpdates is a streaming RPC from the server back to client
     //
     // Reservations are streamed as they are available for this proxy
-    rpc StreamReserveUpdates(ReserveUpdateRequest) returns (stream ReserveResponse) {}
+    rpc StreamReserveUpdates (ReserveUpdateRequest) returns (stream ReserveResponse) {}
+
+    // CheckClientState queries the job state machine whether the provided list of clientIds are waiting for reservations.
+    rpc CheckClientState (CheckClientStateRequest) returns (CheckClientStateResponse) {}
 
     // Release a reserved job back to either a Ready or a Delayed state
     rpc Release (ReleaseRequest) returns (Empty) {}
@@ -157,7 +160,6 @@ message Reservation {
     string proxy_id = 8;
 }
 
-
 message ReleaseRequest {
     // The job identifier of the job to be released
     int64 job_id = 1;
@@ -171,6 +173,30 @@ message ReleaseRequest {
 
     // A delay if set to a value > 0 marks the job as delayed
     int32 delay = 4;
+}
+
+message CheckClientStateRequest {
+    // proxy_id is the id of the proxy server that
+    // forwarded this  request
+    string proxy_id = 1;
+
+    // Array of all client_ids
+    repeated string client_ids = 2;
+}
+
+message CheckClientStateResponse {
+    // proxy_id is the id of the proxy server that
+    // forwarded this  request
+    string proxy_id = 1;
+
+    // Array of all client_ids waiting for reservations
+    repeated string waiting_client_ids = 2;
+
+    // Array of all client_ids not waiting for reservations
+    repeated string not_waiting_client_ids = 3;
+
+    // Array of all client_ids unknown or missing on the server
+    repeated string missing_client_ids = 4;
 }
 
 message TouchRequest {
@@ -232,6 +258,7 @@ enum OpType {
     TICK = 3;
     DELETE = 4;
     RELEASE = 5;
+    CHECK_CLIENT_STATE = 6;
 }
 
 // C & P from GRPC error codes

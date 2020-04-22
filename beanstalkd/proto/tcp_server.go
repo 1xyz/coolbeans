@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 	"net"
+	"strings"
 	"sync"
 	"time"
 )
@@ -27,26 +28,31 @@ type TcpServer struct {
 	shutdownWG *sync.WaitGroup
 }
 
-func NewJSM(jsmAddrs string) state.JSM {
+func NewJSM(jsmAddrs string, connTimeout time.Duration) state.JSM {
 	if len(jsmAddrs) == 0 {
 		jsm, err := state.NewJSM()
 		if err != nil {
-			log.Panicf("CommandProcessor NewJSM() err=%v", err)
+			log.Panicf("NewJSM: err=%v", err)
 		}
 
 		return jsm
 	}
 
-	nc := proxy.NewClient(uuid.New().URN(), []string{jsmAddrs}, 10*time.Second)
+	s := strings.Split(jsmAddrs, ",")
+	for i, e := range s {
+		log.Debugf("NewJSM: jsm server addr %d = %v", i, e)
+	}
+
+	nc := proxy.NewClient(uuid.New().URN(), s, connTimeout)
 	if err := nc.Open(); err != nil {
-		log.Panicf("proxyClient.Open(..). err=%v", err)
+		log.Panicf("NewJSM: proxyClient.Open(..). err=%v", err)
 	}
 
 	return nc
 }
 
-func NewTcpServer(address string, jsmAddrs string) *TcpServer {
-	jsm := NewJSM(jsmAddrs)
+func NewTcpServer(address string, jsmAddrs string, connTimeout time.Duration) *TcpServer {
+	jsm := NewJSM(jsmAddrs, connTimeout)
 
 	return &TcpServer{
 		address:    address,

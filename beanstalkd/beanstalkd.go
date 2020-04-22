@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 )
 
 type Config struct {
@@ -14,6 +15,8 @@ type Config struct {
 	ListenPort int
 	JsmAddrs   string
 }
+
+var ConnTimeout = 30 * time.Second
 
 func (c Config) String() string {
 	return fmt.Sprintf("Listen Addr=%v, Port=%v JSMAddresses=%v",
@@ -26,7 +29,7 @@ func (c Config) String() string {
 // Refer method: waitForShutdown,
 func runTCPServer(c *Config) *proto.TcpServer {
 	addr := fmt.Sprintf("%s:%v", c.ListenAddr, c.ListenPort)
-	tcpServer := proto.NewTcpServer(addr, c.JsmAddrs)
+	tcpServer := proto.NewTcpServer(addr, c.JsmAddrs, ConnTimeout)
 	go func(tcpSrv *proto.TcpServer) {
 		if err := tcpSrv.Listen(); err != nil {
 			log.Errorf("tcpServer.listen err=%v", err)

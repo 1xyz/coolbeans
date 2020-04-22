@@ -72,16 +72,22 @@ func (j *JSMServer) Release(ctx context.Context, req *v1.ReleaseRequest) (*v1.Em
 
 func (j *JSMServer) Reserve(ctx context.Context, req *v1.ReserveRequest) (*v1.ReserveResponse, error) {
 	var resp v1.ReserveResponse
+	log.Infof("Reserve: proxyID=%v clientID=%v timeout=%v watchedTubes=%v",
+		req.ProxyId, req.ClientId, req.TimeoutSecs, req.WatchedTubes)
 	if err := j.performApply(v1.OpType_RESERVE, req, &resp); err != nil {
 		log.WithField("method", "Reserve").Errorf("performApply. Err=%v", err)
 		return nil, err
 	}
 
+	log.Infof("Reserve: proxyID=%v clientID=%v timeout=%v watchedTubes=%v status=%v",
+		req.ProxyId, req.ClientId, req.TimeoutSecs, req.WatchedTubes, resp.Reservation.Status)
 	return &resp, nil
 }
 
 func (j *JSMServer) StreamReserveUpdates(req *v1.ReserveUpdateRequest,
 	stream v1.JobStateMachine_StreamReserveUpdatesServer) error {
+
+	log.Infof("StreamReserveUpdates: proxyID=%v", req.ProxyId)
 	logc := log.WithField("method", "StreamReserveUpdates")
 	respCh, err := j.ctrl.Register(req.ProxyId)
 	if err != nil {
@@ -132,6 +138,17 @@ func (j *JSMServer) Tick() (*v1.TickResponse, error) {
 	var resp v1.TickResponse
 	if err := j.performApply(v1.OpType_TICK, &v1.Empty{}, &resp); err != nil {
 		log.WithField("method", "Reserve").Errorf("performApply. Err=%v", err)
+		return nil, err
+	}
+
+	return &resp, nil
+}
+
+func (j *JSMServer) CheckClientState(ctx context.Context, req *v1.CheckClientStateRequest) (*v1.CheckClientStateResponse, error) {
+	var resp v1.CheckClientStateResponse
+	log.Infof("CheckClientState: proxyID=%v", req.ProxyId)
+	if err := j.performApply(v1.OpType_CHECK_CLIENT_STATE, req, &resp); err != nil {
+		log.Errorf("CheckClientState: performApply. Err=%v", err)
 		return nil, err
 	}
 

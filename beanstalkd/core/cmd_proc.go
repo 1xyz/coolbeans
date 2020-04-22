@@ -60,16 +60,15 @@ type cmdProcessor struct {
 }
 
 func (c *cmdProcessor) Run() {
-	logc := log.WithFields(log.Fields{"method": "cmdProcessor.Run"})
 	for {
 		select {
 		case <-c.newClientReqCh:
-			logc.Debugf("Recv from newClientReqCh")
 			nc := NewClient(defaultTubeName)
 			err := c.clients.Set(nc)
 			if err != nil {
-				logc.Debugf("error c.client.Set(%v) err=%v", nc, err)
+				log.Debugf("cmdProcessor.Run: error c.client.Set(%v) err=%v", nc, err)
 			}
+
 			c.newClientRespCh <- ClientReg{
 				ID:         nc.id,
 				ResponseCh: nc.responseCh,
@@ -77,39 +76,21 @@ func (c *cmdProcessor) Run() {
 			}
 
 		case cmdRequest := <-c.cmdRequestCh:
-			logc.Debugf("Recv cmdRequest %v from cmdRequestCh", cmdRequest)
 			c.processRequest(&cmdRequest)
 
 		case <-c.ticker.C:
 			now := nowSeconds()
 			resv, err := c.jsm.Tick(now)
 			if err != nil {
-				logc.Errorf("error = %v", err)
+				log.Errorf("cmdProcessor.Run: c.jsm.Tick. error = %v", err)
 			} else {
 				for _, r := range resv {
-					logc.Infof("reservation = %v", r)
-					switch r.Status {
-					case state.Matched:
-						cli := c.clients[r.ClientId]
-						// send the header following by the body
-						sendCmdResponse(r.RequestId, cli,
-							[]byte(fmt.Sprintf("RESERVED %d %d", r.JobId, r.BodySize)), true)
-						sendCmdResponse(r.RequestId, cli, r.Body, false)
-
-					case state.Timeout:
-						sendCmdResponse(r.RequestId, c.clients[r.ClientId], []byte(MsgTimedOut), false)
-					case state.DeadlineSoon:
-						sendCmdResponse(r.RequestId, c.clients[r.ClientId], []byte(MsgDeadlineSoon), false)
-					case state.Error:
-						sendCmdResponse(r.RequestId, c.clients[r.ClientId], []byte(MsgInternalError), false)
-					default:
-						logc.Errorf("Unsupported reservation status=%v", r.Status)
-					}
+					c.replyReservation(r, c.clients[r.ClientId], r.RequestId)
 				}
 			}
 
 		case <-c.shutdownCh:
-			logc.Infof("shutdown signal for command processor")
+			log.Infof("cmdProcessor.Run: shutdown signal for command processor")
 			c.ticker.Stop()
 			close(c.newClientRespCh)
 			return
@@ -119,15 +100,10 @@ func (c *cmdProcessor) Run() {
 
 // shutdown this cmdProcessor
 func (c *cmdProcessor) Shutdown() {
-	log.WithFields(log.Fields{"method": "cmdProcessor.Shutdown"}).
-		Infof("Shutdown cmdProcessor")
+	log.Infof("cmdProcessor.Shutdown: shutdown signalled")
 	c.shutdownCh <- true
 	close(c.shutdownCh)
 	close(c.newClientReqCh)
-	// ToDo: cannot safely close cmdRequestCh. We have to keep track
-	// of individual conn objects and close when conn object count is
-	// zero.
-	// close(c.cmdRequestCh)
 }
 
 func (c *cmdProcessor) RegisterClient() *ClientReg {
@@ -338,32 +314,36 @@ func (c *cmdProcessor) appendReservation(cli *client, reqID string, nowSecs, dea
 	for t, _ := range cli.watchingTubes {
 		watchedTubes = append(watchedTubes, t)
 	}
-	resv, err := c.jsm.AppendReservation(cli.id, reqID, watchedTubes, nowSecs, deadlineAt)
+
+	r, err := c.jsm.AppendReservation(cli.id, reqID, watchedTubes, nowSecs, deadlineAt)
 	if err != nil {
-		log.WithField("method", "appendReservation").Errorf("error %v", err)
-		cli.responseCh <- CmdResponse{
-			RequestID: reqID,
-			ClientID:  cli.id,
-			Response:  []byte(MsgInternalError),
-			HasMore:   false,
-		}
-	} else if resv.Status == state.Matched {
-		// reply to the client job metadata
-		cli.responseCh <- CmdResponse{
-			RequestID: resv.RequestId,
-			ClientID:  cli.id,
-			Response:  []byte(fmt.Sprintf("RESERVED %d %d", resv.JobId, resv.BodySize)),
-			HasMore:   true,
-		}
-		// reply to the client job body
-		cli.responseCh <- CmdResponse{
-			RequestID: resv.RequestId,
-			ClientID:  cli.id,
-			Response:  resv.Body,
-			HasMore:   false,
-		}
+		log.Errorf("cmdProcessor.appendReservation: c.jsm.AppendReservation cli.Id=%v err=%v",
+			cli.id, err)
+		c.replyReservation(nil, cli, reqID)
+		return
+	}
+
+	c.replyReservation(r, cli, reqID)
+}
+
+func (c *cmdProcessor) replyReservation(r *state.Reservation, cli *client, reqID string) {
+	if r == nil {
+		log.Errorf("cmdProcessor.replyReservation: clientId=%v MsgInternalError", cli.id)
+		sendCmdResponse(reqID, cli, []byte(MsgInternalError), false)
+		return
+	} else if r.Status == state.Matched {
+		sendCmdResponse(r.RequestId, cli,
+			[]byte(fmt.Sprintf("RESERVED %d %d", r.JobId, r.BodySize)), true)
+		sendCmdResponse(r.RequestId, cli, r.Body, false)
+	} else if r.Status == state.Timeout {
+		sendCmdResponse(r.RequestId, cli, []byte(MsgTimedOut), false)
+	} else if r.Status == state.DeadlineSoon {
+		sendCmdResponse(r.RequestId, cli, []byte(MsgDeadlineSoon), false)
+	} else if r.Status == state.Queued {
+		log.Debugf("cmdProcessor.replyReservation: clientId=%v status=Queued. skip responding", cli.id)
 	} else {
-		log.WithField("method", "appendReservation").Infof("reservation status = %v", resv.Status)
+		log.Errorf("cmdProcessor.replyReservation: clientId=%v r.Status=%v MsgInternalError", cli.id, r.Status)
+		sendCmdResponse(r.RequestId, c.clients[r.ClientId], []byte(MsgInternalError), false)
 	}
 }
 

@@ -335,6 +335,37 @@ func TestLocalJSM_Tick_Returns_TimeOutResvn(t *testing.T) {
 	assert.NotEqualf(t, "", r[0].RequestId, "expect ReqID to be set")
 }
 
+func TestLocalJSM_CheckClientState(t *testing.T) {
+	jsm := newTestJsm(t)
+	tubes := []TubeName{"foo"}
+	cliIDs := []ClientID{
+		ClientID("client-123"),
+		ClientID("foobar-123"),
+		ClientID("wooyoo-123"),
+	}
+
+	if r := createTestResv(t, jsm, cliIDs[0], tubes, 10); r.Status != Queued {
+		t.Fatalf("expect r.Status = %v to be Queued", r.Status)
+	}
+
+	_, err := jsm.Tick(testNowSecs() + 15)
+	if r := createTestResv(t, jsm, cliIDs[1], tubes, 10); r.Status != Queued {
+		t.Fatalf("expect r.Status = %v to be Queued", r.Status)
+	}
+
+	waiting, notWaiting, missing, err := jsm.CheckClientState(cliIDs)
+	assert.Nilf(t, err, "expect err to be nil")
+
+	assert.Equalf(t, 1, len(waiting), "expect waiting to be 1")
+	assert.Equalf(t, []ClientID{cliIDs[1]}, waiting, "expect cliIDs[0] to be in waiting")
+
+	assert.Equalf(t, 1, len(notWaiting), "expect notWaiting to be one")
+	assert.Equalf(t, []ClientID{cliIDs[0]}, notWaiting, "expect cliIDs[1] to be in notWaiting state")
+
+	assert.Equalf(t, 1, len(missing), "expect missing to be one")
+	assert.Equalf(t, []ClientID{cliIDs[2]}, missing, "expect cliIDs[1] to be in missing state")
+}
+
 func TestLocalJSM_SnapshotReturnsNotNil(t *testing.T) {
 	snap, err := newTestJsm(t).Snapshot()
 	assert.Nilf(t, err, "expect err to be nil")

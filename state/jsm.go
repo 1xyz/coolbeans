@@ -399,6 +399,35 @@ func (jsm *localJSM) Tick(nowSecs int64) ([]*Reservation, error) {
 	return res, nil
 }
 
+// CheckClientState queries the job state machine whether the provided list of clientIds are waiting for reservations.
+//
+// The response returns the ClientIDs (i) which are waiting for reservations, (ii) those which are not and (iii)
+// those which are missing.
+func (jsm *localJSM) CheckClientState(clientIDs []ClientID) ([]ClientID, []ClientID, []ClientID, error) {
+	waitingIds, notWaitingIds, missingIds :=
+		make([]ClientID, 0), make([]ClientID, 0), make([]ClientID, 0)
+
+	for _, id := range clientIDs {
+		cli, err := jsm.clients.Find(id)
+		if err == ErrEntryMissing {
+			missingIds = append(missingIds, id)
+			continue
+		} else if err != nil {
+			log.Errorf("CheckClientState: jsm.clients.Find clientId=%v. err = %v", id, err)
+			return nil, nil, nil, err
+		}
+
+		if cli.IsWaitingForResv {
+			waitingIds = append(waitingIds, id)
+			continue
+		}
+
+		notWaitingIds = append(notWaitingIds, id)
+	}
+
+	return waitingIds, notWaitingIds, missingIds, nil
+}
+
 func (jsm *localJSM) Snapshot() (JSMSnapshot, error) {
 	return newLocalSnapshot(jsm), nil
 }
