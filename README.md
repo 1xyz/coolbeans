@@ -32,6 +32,8 @@ Coolbeans is written in golang, it requires go1.13 or newer. It is recommended t
 
 Optionally, a Dockerfile and compose file is provided. This requires Docker ver 17 or newer. Refer [docker docs](https://docs.docker.com/) on how to install.
 
+The project depends on protocol buffers, ensure that you have protoc installed. Refer [here](https://github.com/protocolbuffers/protobuf/blob/master/src/README.md) or [here](https://formulae.brew.sh/formula/protobuf)
+
 ### Build & run the binary.
 
 The [Makefile](./Makefile) provides different target options to build and run from source. 
