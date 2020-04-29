@@ -254,6 +254,10 @@ func (j *wrapJob) ID() state.JobID {
 func (j *wrapJob) Priority() uint32 {
 	return j.jp.Priority
 }
+func (j *wrapJob) UpdatePriority(newPriority uint32) uint32 {
+	j.jp.Priority = newPriority
+	return j.jp.Priority
+}
 func (j *wrapJob) Delay() int64 {
 	return j.jp.Delay
 }

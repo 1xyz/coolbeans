@@ -88,6 +88,9 @@ type tubeState struct {
 
 	// Set of clientHeap that are waiting for reservations
 	waiting *clientResvQueue
+
+	// Min heap of jobs (ordered by buriedAt)
+	buriedJobs BuriedJobs
 }
 
 func (ti tubeIndex) getByName(tubeName TubeName, create bool) (*tubeState, error) {
@@ -102,6 +105,7 @@ func (ti tubeIndex) getByName(tubeName TubeName, create bool) (*tubeState, error
 			delayedJobs: NewDelayedJobs(),
 			readyJobs:   NewPriorityJobs(),
 			waiting:     newClientResvQueue(),
+			buriedJobs:  NewBuriedJobs(),
 		}
 		return ti[tubeName], nil
 	} else {
@@ -112,10 +116,11 @@ func (ti tubeIndex) getByName(tubeName TubeName, create bool) (*tubeState, error
 func (ti tubeIndex) cleanup(tubeName TubeName) {
 	if t, ok := ti[tubeName]; !ok {
 		return
-	} else if t.readyJobs.Len() == 0 && t.delayedJobs.Len() == 0 && t.waiting.Len() == 0 {
+	} else if t.readyJobs.Len() == 0 && t.delayedJobs.Len() == 0 && t.waiting.Len() == 0 && t.buriedJobs.Len() == 0 {
 		delete(ti, tubeName)
 		t.readyJobs = nil
 		t.delayedJobs = nil
+		t.buriedJobs = nil
 	}
 }
 
@@ -133,6 +138,14 @@ func (ti tubeIndex) EnqueueDelayedJob(job Job) (*JobEntry, error) {
 		return nil, err
 	}
 	return t.delayedJobs.Enqueue(job), nil
+}
+
+func (ti tubeIndex) EnqueueBuriedJob(job Job) (*JobEntry, error) {
+	t, err := ti.getByName(job.TubeName(), true)
+	if err != nil {
+		return nil, err
+	}
+	return t.buriedJobs.Enqueue(job), nil
 }
 
 func (ti tubeIndex) RemoveDelayedJob(jobEntry *JobEntry) (*JobEntry, error) {
@@ -154,6 +167,15 @@ func (ti tubeIndex) RemoveReadyJob(jobEntry *JobEntry) (*JobEntry, error) {
 	}
 
 	return t.readyJobs.RemoveAt(jobEntry)
+}
+
+func (ti tubeIndex) RemoveBuriedJob(jobEntry *JobEntry) (*JobEntry, error) {
+	t, err := ti.getByName(jobEntry.TubeName(), false)
+	if err != nil {
+		return nil, err
+	}
+
+	return t.buriedJobs.RemoveAt(jobEntry)
 }
 
 func (ti tubeIndex) NextDelayedJob(tubeName TubeName) (*JobEntry, error) {
@@ -178,6 +200,17 @@ func (ti tubeIndex) NextReadyJob(tubeName TubeName) (*JobEntry, error) {
 		return nil, ErrEntryMissing
 	}
 	return t.readyJobs.Peek(), nil
+}
+
+func (ti tubeIndex) NextBuriedJob(tubeName TubeName) (*JobEntry, error) {
+	t, err := ti.getByName(tubeName, false)
+	if err != nil {
+		return nil, ErrEntryMissing
+	}
+	if t.buriedJobs.Len() == 0 {
+		return nil, ErrEntryMissing
+	}
+	return t.buriedJobs.Peek(), nil
 }
 
 func (ti tubeIndex) EnqueueToWaitQ(tubeName TubeName, cli *ClientResvEntry) error {

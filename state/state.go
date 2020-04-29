@@ -41,6 +41,9 @@ type Job interface {
 	// the least urgent priority is 4,294,967,295.
 	Priority() uint32
 
+	// UpdatePriority to a new value. Return back the newly set value
+	UpdatePriority(newPriority uint32) uint32
+
 	// Delay is an integer number of seconds to wait before putting the job in
 	// the ready queue. The job will be in the "delayed" state during this time.
 	// Maximum delay is 2**32-1.
@@ -124,6 +127,11 @@ func (j *localJob) ID() JobID {
 }
 
 func (j *localJob) Priority() uint32 {
+	return j.priority
+}
+
+func (j *localJob) UpdatePriority(newPriority uint32) uint32 {
+	j.priority = newPriority
 	return j.priority
 }
 
@@ -258,17 +266,20 @@ type JSM interface {
 	// Release transitioned this reserved job to a Ready one
 	Release(jobID JobID, clientID ClientID) error
 
-	// // Release this job into the denowSeconds() + int64(delaySeconds)layed state (from a reserved to delay state)
+	// // Release this job into the delayed state (from a reserved to delay state)
 	// ReleaseWithDelay(jobID uint64, CliID string, delaySeconds int) error
 	//
 	// // Extend a reserved job's reservation TTL by its TTR (time-to-run)
 	// Touch(jobID uint64) error
-	//
-	// // Bury this job (from a reserved state)
-	// Bury(jobID uint64) error
-	//
-	// // Kick this job from buried state to a ready state
-	// Kick(jobID uint64) error
+
+	// Bury this job (from a reserved state)
+	Bury(nowSeconds int64, jobID JobID, priority uint32, clientID ClientID) error
+
+	// Kick this job from buried state to a ready state
+	Kick(jobID JobID) error
+
+	// Kick atmost n jobs from the specified tube to ready state
+	KickN(name TubeName, n int) (int, error)
 
 	// Returns an interface that allows a caller to snapshot the current
 	// state of the JSM. Callers of the interface should not be done across

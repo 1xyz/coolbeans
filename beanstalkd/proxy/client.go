@@ -219,6 +219,18 @@ func (c *Client) Delete(jobID state.JobID, clientID state.ClientID) error {
 	return nil
 }
 
+func (c *Client) Bury(nowSeconds int64, jobID state.JobID, priority uint32, clientID state.ClientID) error {
+	return nil
+}
+
+func (c *Client) Kick(jobID state.JobID) error {
+	return nil
+}
+
+func (c *Client) KickN(name state.TubeName, n int) (int, error) {
+	return 0, nil
+}
+
 func (c *Client) Tick(nowSeconds int64) ([]*state.Reservation, error) {
 	result := make([]*state.Reservation, 0)
 	entries := c.rq.Drain()

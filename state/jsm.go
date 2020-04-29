@@ -170,6 +170,10 @@ func (jsm *localJSM) NextReservedJob(clientID ClientID) (Job, error) {
 	return jsm.reservedJobs.NextReservedJob(clientID)
 }
 
+func (jsm *localJSM) NextBuriedJob(tubeName TubeName) (Job, error) {
+	return jsm.tubes.NextBuriedJob(tubeName)
+}
+
 func (jsm *localJSM) Ready(jobID JobID) error {
 	return jsm.fromDelayedToReady(jobID)
 }
@@ -182,6 +186,40 @@ func (jsm *localJSM) Reserve(nowSeconds int64, jobID JobID, clientID ClientID) e
 // Release this job to the ready state (from a reserved to ready state)
 func (jsm *localJSM) Release(jobID JobID, clientID ClientID) error {
 	return jsm.fromReservedToReady(jobID, clientID)
+}
+
+// Bury this job (from a reserved state)
+func (jsm *localJSM) Bury(nowSeconds int64, jobID JobID, priority uint32, clientID ClientID) error {
+	return jsm.fromReservedToBuried(nowSeconds, jobID, priority, clientID)
+}
+
+// Kick this job from the buried state to a ready state
+func (jsm *localJSM) Kick(jobID JobID) error {
+	return jsm.fromBuriedToReady(jobID)
+}
+
+// Kick atmost n jobs from the buried state to a ready state
+func (jsm *localJSM) KickN(tubeName TubeName, n int) (int, error) {
+	var count = 0
+	for i := 0; i < n; i++ {
+		j, err := jsm.NextBuriedJob(tubeName)
+		if err == ErrEntryMissing {
+			return count, nil
+		} else if err != nil {
+			log.Errorf("jsm.KickN: jsm.NextBuriedJob err = %v", err)
+			return 0, nil
+		}
+
+		log.Debugf("jsm.KickN: kick(jobId=%v)", j.ID())
+		if err := jsm.Kick(j.ID()); err != nil {
+			log.Errorf("jsm.KickN: jsm.Kick jobId=%v err = %v", j.ID(), err)
+			return 0, err
+		}
+
+		count++
+	}
+
+	return count, nil
 }
 
 func (jsm *localJSM) fromInitialToReady(job Job) error {
@@ -296,6 +334,62 @@ func (jsm *localJSM) fromReadyToReserved(nowSeconds int64, jobID JobID, clientID
 	e.job.UpdateState(Reserved)
 	e.job.UpdateReservedBy(clientID)
 	if je, err := jsm.reservedJobs.Enqueue(clientID, e.job); err != nil {
+		return err
+	} else {
+		e.entry = je
+		return nil
+	}
+}
+
+func (jsm *localJSM) fromReservedToBuried(nowSeconds int64, jobID JobID, priority uint32, clientID ClientID) error {
+	e, err := jsm.jobs.Get(jobID)
+	if err != nil {
+		return err
+	}
+
+	if e.job.State() != Reserved {
+		return ErrInvalidJobTransition
+	}
+
+	if len(clientID) > 0 && e.job.ReservedBy() != clientID {
+		return ErrUnauthorizedOperation
+	}
+
+	_, err = jsm.reservedJobs.Remove(e.entry)
+	if err != nil {
+		return err
+	}
+
+	e.job.UpdateReservedBy("")
+	e.job.UpdateBuriedAt(nowSeconds)
+	e.job.UpdateState(Buried)
+	e.job.UpdatePriority(priority)
+	if je, err := jsm.tubes.EnqueueBuriedJob(e.job); err != nil {
+		return err
+	} else {
+		e.entry = je
+		return nil
+	}
+}
+
+func (jsm *localJSM) fromBuriedToReady(jobID JobID) error {
+	e, err := jsm.jobs.Get(jobID)
+	if err != nil {
+		return err
+	}
+
+	if e.job.State() != Buried {
+		return ErrInvalidJobTransition
+	}
+
+	_, err = jsm.tubes.RemoveBuriedJob(e.entry)
+	if err != nil {
+		return err
+	}
+
+	e.job.ResetBuriedAt()
+	e.job.UpdateState(Ready)
+	if je, err := jsm.tubes.EnqueueReadyJob(e.job); err != nil {
 		return err
 	} else {
 		e.entry = je
@@ -799,6 +893,8 @@ func (l *localSnapshot) restoreJob(j Job) error {
 		ie.entry, err = l.ti.EnqueueReadyJob(j)
 	case Delayed:
 		ie.entry, err = l.ti.EnqueueDelayedJob(j)
+	case Buried:
+		ie.entry, err = l.ti.EnqueueBuriedJob(j)
 	}
 	return err
 }

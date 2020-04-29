@@ -215,8 +215,8 @@ func TestLocalJSM_Delete_ReservedJob(t *testing.T) {
 
 	err := jsm.Delete(j.ID(), clientID)
 	assert.Nilf(t, err, "expect err to be nil")
-	assert.Equalf(t, Deleted, j.State(), "Expect job state to be ready")
-	assert.Equalf(t, ClientID(""), j.ReservedBy(), "Expect job to be reserved by foobar")
+	assert.Equalf(t, Deleted, j.State(), "Expect job state to be Deleted")
+	assert.Equalf(t, ClientID(""), j.ReservedBy(), "Expect job to be reserved by none")
 }
 
 func TestLocalJSM_Delete_ReservedJob_ErrUnauthorizedOperation(t *testing.T) {
@@ -229,6 +229,132 @@ func TestLocalJSM_Delete_ReservedJob_ErrUnauthorizedOperation(t *testing.T) {
 	err := jsm.Delete(j.ID(), ClientID("foofoo"))
 	assert.Equalf(t, ErrUnauthorizedOperation, err,
 		"expect err to be ErrUnauthorizedOperation")
+}
+
+func TestLocalJSM_Bury_ReservedJob(t *testing.T) {
+	jsm := newTestJsm(t)
+	j := putTestJob(t, jsm, TubeName("foo"), false)
+	clientID := ClientID("foobar")
+	if err := jsm.Reserve(testNowSecs(), j.ID(), clientID); err != nil {
+		t.Fatalf("reserve error %v", err)
+	}
+
+	newPri := j.Priority() + 1
+	buriedAt := testNowSecs()
+	err := jsm.Bury(buriedAt, j.ID(), newPri, clientID)
+	assert.Nilf(t, err, "expect err to be nil")
+	assert.Equalf(t, Buried, j.State(), "Expect job state to be Buried")
+	assert.Equalf(t, ClientID(""), j.ReservedBy(), "Expect job to be reserved by foobar")
+	assert.Equalf(t, buriedAt, j.BuriedAt(), "Expect job to be buriedAt at expected value")
+	assert.Equalf(t, newPri, j.Priority(), "Expect job to be Priority to be updated")
+}
+
+func TestLocalJSM_Bury_ReservedJob_ErrUnauthorizedOperation(t *testing.T) {
+	jsm := newTestJsm(t)
+	j := putTestJob(t, jsm, TubeName("foo"), false)
+	if err := jsm.Reserve(testNowSecs(), j.ID(), ClientID("foobar")); err != nil {
+		t.Fatalf("reserve error %v", err)
+	}
+
+	err := jsm.Bury(testNowSecs(), j.ID(), 1, ClientID("foofoo"))
+	assert.Equalf(t, ErrUnauthorizedOperation, err,
+		"expect err to be ErrUnauthorizedOperation")
+}
+
+func TestLocalJSM_Bury_ReadyJob_ErrInvalidJobTransition(t *testing.T) {
+	jsm := newTestJsm(t)
+	j := putTestJob(t, jsm, TubeName("foo"), false)
+
+	newPri := j.Priority() + 1
+	buriedAt := testNowSecs()
+	err := jsm.Bury(buriedAt, j.ID(), newPri, ClientID("foofoo"))
+	assert.Equalf(t, ErrInvalidJobTransition, err,
+		"expect err to be ErrInvalidJobTransition")
+}
+
+func TestLocalJSM_Bury_UnknownJob_ErrEntryMissing(t *testing.T) {
+	jsm := newTestJsm(t)
+	buriedAt := testNowSecs()
+	err := jsm.Bury(buriedAt, JobID(1234), 255, ClientID("foofoo"))
+	assert.Equalf(t, ErrEntryMissing, err,
+		"expect err to be ErrEntryMissing")
+}
+
+func TestLocalJSM_Kick_BuriedJob(t *testing.T) {
+	jsm := newTestJsm(t)
+	j := putTestJob(t, jsm, TubeName("foo"), false)
+	clientID := ClientID("foobar")
+	if err := jsm.Reserve(testNowSecs(), j.ID(), clientID); err != nil {
+		t.Fatalf("reserve error %v", err)
+	}
+	if err := jsm.Bury(testNowSecs(), j.ID(), j.Priority()+1, clientID); err != nil {
+		t.Fatalf("bury error %v", err)
+	}
+
+	err := jsm.Kick(j.ID())
+	assert.Nilf(t, err, "expect err to be nil")
+	assert.Equalf(t, Ready, j.State(), "Expect job state to be Rwady")
+	assert.Equalf(t, int64(0), j.BuriedAt(), "Expect job to be buriedAt at expected value")
+}
+
+func TestLocalJSM_Kick_UnknownJob_ErrEntryMissing(t *testing.T) {
+	jsm := newTestJsm(t)
+	err := jsm.Kick(JobID(1234))
+	assert.Equalf(t, ErrEntryMissing, err,
+		"expect err to be ErrEntryMissing")
+}
+
+func TestLocalJSM_Kick_ReadyJob_ErrInvalidJobTransition(t *testing.T) {
+	jsm := newTestJsm(t)
+	j := putTestJob(t, jsm, TubeName("foo"), false)
+
+	err := jsm.Kick(j.ID())
+	assert.Equalf(t, ErrInvalidJobTransition, err,
+		"expect err to be ErrInvalidJobTransition")
+}
+
+func TestLocalJSM_KickN(t *testing.T) {
+	tubeName := TubeName("foo")
+	var tc = []struct {
+		tube                            TubeName
+		n, kickCount, expectedKickCount int
+	}{
+		{tubeName, 10, 3, 3},
+		{tubeName, 0, 30, 0},
+		{tubeName, 10, 30, 10},
+		{TubeName("bar"), 10, 30, 0},
+	}
+	for _, tt := range tc {
+		jsm := newTestJsm(t)
+		jobs := buryNJobs(t, jsm, tt.n, tubeName)
+
+		actualKickCount, err := jsm.KickN(tt.tube, tt.kickCount)
+		assert.Nilf(t, err, "expect err to be nil")
+		assert.Equalf(t, tt.expectedKickCount, actualKickCount, "Expect KickedCount to match")
+		for i := 0; i < actualKickCount; i++ {
+			assert.Equalf(t, Ready, jobs[i].State(), "Expect job state to be Ready")
+		}
+		for i := actualKickCount; i < tt.n; i++ {
+			assert.Equalf(t, Buried, jobs[i].State(), "Expect job state to be Buried")
+		}
+	}
+}
+
+func buryNJobs(t *testing.T, jsm *localJSM, n int, tubeName TubeName) []Job {
+	jobs := make([]Job, n)
+	clientID := ClientID("foobar")
+	for i := 0; i < n; i++ {
+		j := putTestJob(t, jsm, tubeName, false)
+		if err := jsm.Reserve(testNowSecs(), j.ID(), clientID); err != nil {
+			t.Fatalf("reserve error %v", err)
+		}
+		if err := jsm.Bury(testNowSecs(), j.ID(), j.Priority(), clientID); err != nil {
+			t.Fatalf("bury error %v", err)
+		}
+		jobs[i] = j
+	}
+
+	return jobs
 }
 
 func TestLocalJSM_GetJob(t *testing.T) {
@@ -398,10 +524,11 @@ func TestLocalSnapshot_RestoreJobs(t *testing.T) {
 	nReady := 10
 	nDelayed := 3
 	nReserved := 5
-	n := nReady + nDelayed + nReserved
+	nBuried := 4
+	n := nReady + nDelayed + nReserved + nBuried
 	tube := TubeName("foo")
 	reservedBy := ClientID("foofoo")
-	jsm := createMixTestJobs(t, tube, nReady, nDelayed, nReserved, reservedBy)
+	jsm := createMixTestJobs(t, tube, nReady, nDelayed, nReserved, nBuried, reservedBy)
 	entries := snapshotEntries(t, jsm)
 
 	jsm2 := newTestJsm(t)
@@ -428,6 +555,8 @@ func TestLocalSnapshot_RestoreJobs(t *testing.T) {
 		"expect n=%v jobs to be restored as ready in tube foo", nReady)
 	assert.Equalf(t, nDelayed, jsm2.tubes[tube].delayedJobs.Len(),
 		"expect n=%v jobs to be restored as delayed in tube foo", nDelayed)
+	assert.Equalf(t, nBuried, jsm2.tubes[tube].buriedJobs.Len(),
+		"expect n=%v jobs to be restored as buriedJobs in tube foo", nReserved)
 	assert.Equalf(t, nReserved, jsm2.reservedJobs[reservedBy].Len(),
 		"expect n=%v jobs to be restored as reserved in tube foo", nReserved)
 }
@@ -454,7 +583,7 @@ func createNTestJobs(t *testing.T, n int, tube TubeName, hasDelay bool) (*localJ
 	return jsm, m
 }
 
-func createMixTestJobs(t *testing.T, tube TubeName, nReady, nDelayed, nReserved int, clientID ClientID) *localJSM {
+func createMixTestJobs(t *testing.T, tube TubeName, nReady, nDelayed, nReserved, nBuried int, clientID ClientID) *localJSM {
 	jsm := newTestJsm(t)
 	for i := 0; i < nReady; i++ {
 		putTestJob(t, jsm, tube, false)
@@ -469,6 +598,7 @@ func createMixTestJobs(t *testing.T, tube TubeName, nReady, nDelayed, nReserved 
 		j.UpdateReservation(now)
 		j.UpdateState(Reserved)
 	}
+	buryNJobs(t, jsm, nBuried, tube)
 	return jsm
 }
 
