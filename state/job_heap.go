@@ -169,3 +169,22 @@ func NewReservedJobs() ReservedJobs {
 	heap.Init(&pq)
 	return &pq
 }
+
+// BuriedJobs is a JobHeap, with jobs ordered by its BuriedAt
+// field. Lower (earlier) BuriedAt take a higher precedence
+// If two jobs have the same BuriedAt value, the lower job id gets precedence
+type BuriedJobs JobHeap
+
+func NewBuriedJobs() ReservedJobs {
+	pq := jobHeap{
+		entries: make([]*JobEntry, 0),
+	}
+	pq.lessFn = func(i, j int) bool {
+		if pq.entries[i].BuriedAt() == pq.entries[j].BuriedAt() {
+			return pq.entries[i].ID() < pq.entries[j].ID()
+		}
+		return pq.entries[i].BuriedAt() < pq.entries[j].BuriedAt()
+	}
+	heap.Init(&pq)
+	return &pq
+}

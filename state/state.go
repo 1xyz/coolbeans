@@ -90,11 +90,15 @@ type Job interface {
 	// Update the reservedBy client
 	UpdateReservedBy(clientID ClientID)
 
-	// Serialze the content of this job into a byte slice
-	// Serialize() ([]byte, error)
+	// Returns the time this specific job was buried
+	BuriedAt() int64
 
-	// De-Serialize the input byte slice and populate the Job object
-	// DeSerialize(bytes []byte) error
+	// Reset the buriedAt value to zero
+	ResetBuriedAt()
+
+	// Update the buriedAt value to the current clock
+	// Return back the new BuriedAt time
+	UpdateBuriedAt(nowSeconds int64) int64
 }
 
 type localJob struct {
@@ -112,6 +116,7 @@ type localJob struct {
 	state      JobState
 	expiresAt  int64
 	reservedBy ClientID
+	buriedAt   int64
 }
 
 func (j *localJob) ID() JobID {
@@ -155,6 +160,10 @@ func (j *localJob) State() JobState {
 }
 
 func (j *localJob) UpdateState(newState JobState) {
+	if j.state == Buried {
+		j.buriedAt = 0
+	}
+
 	j.state = newState
 }
 
@@ -173,6 +182,19 @@ func (j *localJob) ReservedBy() ClientID {
 func (j *localJob) UpdateReservation(nowSeconds int64) (int64, error) {
 	j.expiresAt = nowSeconds + int64(j.ttr)
 	return j.expiresAt, nil
+}
+
+func (j *localJob) ResetBuriedAt() {
+	j.buriedAt = 0
+}
+
+func (j *localJob) UpdateBuriedAt(nowSeconds int64) int64 {
+	j.buriedAt = nowSeconds
+	return j.buriedAt
+}
+
+func (j *localJob) BuriedAt() int64 {
+	return j.buriedAt
 }
 
 // JSM provides methods for the beanstalkd job state machine.

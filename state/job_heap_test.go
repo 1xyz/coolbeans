@@ -71,6 +71,7 @@ func newTestJob(pri uint32, delay int64, ttr int, bodySize int,
 		readyAt:   now + delay,
 		state:     Initial,
 		expiresAt: 0,
+		buriedAt:  0,
 	}
 }
 
@@ -211,4 +212,92 @@ func updateResv(t *testing.T, j Job) {
 	if err != nil {
 		t.Fatalf("un-expected err %v", err)
 	}
+}
+
+func TestNewBuriedJobs(t *testing.T) {
+	bJobs := NewBuriedJobs()
+	assert.Equalf(t, bJobs.Len(), 0, "Initial job list is empty")
+}
+
+// TestBuriedJobs_Enqueue_Order
+// Verify Enqueue is priority ordered by buriedAt; lower buriedAt has higher precedence
+func TestBuriedJobs_Enqueue_Order(t *testing.T) {
+	bJobs := NewBuriedJobs()
+	j0, j1, j2 := newTestJobWithBuriedAt(t, 10),
+		newTestJobWithBuriedAt(t, 5),
+		newTestJobWithBuriedAt(t, 20)
+
+	je0 := bJobs.Enqueue(j0)
+	je1 := bJobs.Enqueue(j1)
+	je2 := bJobs.Enqueue(j2)
+
+	assert.Equalf(t, 1, je0.index,
+		"Result job entry is at the middle of queue")
+	assert.Equalf(t, 0, je1.index,
+		"Result job entry is at the head of queue")
+	assert.Equalf(t, 2, je2.index,
+		"Result job entry is at the end of queue")
+}
+
+// TestBuriedJobs_Enqueue_Order_WithEqualBuriedAt
+// Verify Enqueue is priority ordered by job id when buriedAt are equal;
+// lower job id  has higher precedence
+func TestBuriedJobs_Enqueue_Order_WithEqualBuriedAt(t *testing.T) {
+	bJobs := NewBuriedJobs()
+	j0, j1 := newTestJobWithBuriedAt(t, 10),
+		newTestJobWithBuriedAt(t, 10)
+
+	je1 := bJobs.Enqueue(j1)
+	je0 := bJobs.Enqueue(j0)
+
+	assert.Equalf(t, 0, je0.index,
+		"Result job entry is at the head of queue since its id is lower")
+	assert.Equalf(t, 1, je1.index,
+		"Result job entry is at the head of queue since its id is lower")
+}
+
+// TestBuriedJobs_Dequeue
+// Verify the dequeue operation is ordered by buriedAt; lower buriedAt jobEntry is de-queued first
+func TestBuriedJobs_Dequeue(t *testing.T) {
+	bJobs := NewBuriedJobs()
+	j0, j1, j2 := newTestJobWithBuriedAt(t, 10),
+		newTestJobWithBuriedAt(t, 5),
+		newTestJobWithBuriedAt(t, 20)
+
+	bJobs.Enqueue(j0)
+	bJobs.Enqueue(j1)
+	bJobs.Enqueue(j2)
+
+	assert.Equalf(t, j1.ID(), bJobs.Dequeue().ID(),
+		"Expect jobEntry1 to be de-queued")
+	assert.Equalf(t, j0.ID(), bJobs.Dequeue().ID(),
+		"Expect jobEntry0 to be de-queued")
+	assert.Equalf(t, j2.ID(), bJobs.Dequeue().ID(),
+		"Expect jobEntry2 to be de-queued")
+}
+
+// TestBuriedJobs_RemoveAt
+// Verify RemoveAt operation; i.e remove a specific jobEntry
+func TestBuriedJobs_RemoveAt(t *testing.T) {
+	bJobs := NewBuriedJobs()
+	j0, j1, j2 := newTestJobWithBuriedAt(t, 10),
+		newTestJobWithBuriedAt(t, 5),
+		newTestJobWithBuriedAt(t, 20)
+
+	je0 := bJobs.Enqueue(j0)
+	bJobs.Enqueue(j1)
+	bJobs.Enqueue(j2)
+
+	a, err := bJobs.RemoveAt(je0)
+
+	assert.Nil(t, err, "Expect err to be nil")
+	assert.Equalf(t, je0.ID(), a.ID(),
+		"Expect jobEntry0 to be removedAt")
+	assert.Equalf(t, 2, bJobs.Len(), "expect length to be 2")
+}
+
+func newTestJobWithBuriedAt(t *testing.T, nowSeconds int64) Job {
+	j := newTestJob(0, 0, 10, 0, nil, TubeName("alpha"))
+	j.UpdateBuriedAt(nowSeconds)
+	return j
 }

@@ -95,6 +95,7 @@ func (jsm *localJSM) NewJob(nowSeconds int64,
 		readyAt:   nowSeconds + delay,
 		state:     Initial,
 		expiresAt: 0,
+		buriedAt:  0,
 	}
 
 	if newJob.Delay() > 0 {

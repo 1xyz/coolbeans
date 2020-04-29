@@ -60,4 +60,7 @@ message JobProto {
 
     // body is the job body -- a sequence of bytes of length BodySize
     bytes body = 12;
+
+    // buried_at the clock time when the job is buried
+    int64 buried_at = 13;
 }

@@ -295,3 +295,16 @@ func (j *wrapJob) UpdateReservation(nowSeconds int64) (int64, error) {
 	j.jp.ExpiresAt = nowSeconds + int64(j.jp.Ttr)
 	return j.jp.ExpiresAt, nil
 }
+
+func (j *wrapJob) ResetBuriedAt() {
+	j.jp.BuriedAt = 0
+}
+
+func (j *wrapJob) UpdateBuriedAt(nowSeconds int64) int64 {
+	j.jp.BuriedAt = nowSeconds
+	return j.jp.BuriedAt
+}
+
+func (j *wrapJob) BuriedAt() int64 {
+	return j.jp.BuriedAt
+}
