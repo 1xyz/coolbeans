@@ -99,6 +99,9 @@ var (
 
 	// kick <bound>
 	kickNArgRe = regexp.MustCompile(`(?P<bound>^\d+$)`)
+
+	// release <id> <pri> <delay>
+	releaseArgRe = regexp.MustCompile(`^(?P<id>^\d+) (?P<pri>\d+) (?P<delay>\d+)$`)
 )
 
 type putArg struct {
@@ -264,5 +267,43 @@ func NewKickNArg(data *CmdData) (*kickNArg, error) {
 	}
 	return &kickNArg{
 		bound: bound,
+	}, nil
+}
+
+type releaseArg struct {
+	id    state.JobID
+	pri   uint32
+	delay int64
+}
+
+func NewReleaseArg(data *CmdData) (*releaseArg, error) {
+	tm, ok := matchNamedGroups(data.Args, buryArgRe)
+	if !ok {
+		log.Errorf("NewReleaseArg: matchNamedGroups ok=false")
+		return nil, ErrBadFormat
+	}
+
+	id, err := strconv.ParseUint(tm["id"], 10, 64)
+	if err != nil {
+		log.Errorf("NewReleaseArg: ParseUint(id) err=%v", err)
+		return nil, ErrBadFormat
+	}
+
+	pri, err := strconv.ParseUint(tm["pri"], 10, 32)
+	if err != nil {
+		log.Errorf("NewReleaseArg: ParseUint(pri) err=%v", err)
+		return nil, ErrBadFormat
+	}
+
+	delay, err := strconv.ParseInt(tm["pri"], 10, 64)
+	if err != nil {
+		log.Errorf("NewReleaseArg: ParseInt(delay) err=%v", err)
+		return nil, ErrBadFormat
+	}
+
+	return &releaseArg{
+		id:    state.JobID(id),
+		pri:   uint32(pri),
+		delay: delay,
 	}, nil
 }

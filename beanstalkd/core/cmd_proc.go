@@ -153,6 +153,8 @@ func (c *cmdProcessor) processRequest(req *CmdRequest) {
 		c.reserve(cli, req)
 	case ReserveWithTimeout:
 		resp = c.reserveWithTimeout(cli, req)
+	case Touch:
+		resp = c.touch(cli, req)
 	case Use:
 		resp = c.use(cli, req)
 	case Watch:
@@ -289,6 +291,24 @@ func (c *cmdProcessor) kickN(cli *client, req *CmdRequest) *CmdResponse {
 		resp.setResponse(MsgInternalError)
 	} else {
 		resp.setResponse(fmt.Sprintf("KICKED %d", n))
+	}
+
+	return resp
+}
+
+func (c *cmdProcessor) touch(cli *client, req *CmdRequest) *CmdResponse {
+	resp := NewCmdResponseFromReq(req)
+	cmd, ok := req.cmd.(*idArg)
+	if !ok {
+		// Note: this is indicative of code-bug where the CmdType and cmd don't match up
+		log.Panicf("cmdProcessor.touch: cast-error, cannot cast to *idArg")
+	}
+
+	err := c.jsm.Touch(nowSeconds(), cmd.id, req.ClientID)
+	if err != nil {
+		resp.setResponse(MsgNotFound)
+	} else {
+		resp.setResponse("TOUCHED")
 	}
 
 	return resp
@@ -466,6 +486,8 @@ func NewCmdRequest(cmdData *CmdData, clientID state.ClientID) (CmdRequest, error
 		cmdRequest.cmd, err = NewTubeArg(cmdData)
 	case ReserveWithTimeout:
 		cmdRequest.cmd, err = NewReserveWithTimeoutArg(cmdData)
+	case Touch:
+		cmdRequest.cmd, err = NewIDArg(cmdData)
 	case Quit, Reserve:
 	default:
 		err = ErrCmdNotFound
