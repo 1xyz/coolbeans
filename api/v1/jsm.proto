@@ -39,6 +39,9 @@ service JobStateMachine {
 
     // Kick this job, if this job is in a buried stated to ready state
     rpc Kick (KickRequest) returns (Empty) {}
+
+    // Kick at-most n jobs in this tube,
+    rpc KickN (KickNRequest) returns (KickNResponse) {}
 }
 
 message PutRequest {
@@ -204,16 +207,38 @@ message TouchRequest {
     int64 job_id = 1;
 }
 
-
 message BuryRequest {
     // The job identifier of the job to be buried
     int64 job_id = 1;
+
+    // Refer Job.priority, the new priority for the job
+    uint32 priority = 2;
+
+    // Client id of the request
+    string client_id = 3;
+
+    // proxy_id is the id of the proxy server that forwarded this  request
+    string proxy_id = 4;
 }
 
 message KickRequest {
     // The job identifier of the job to be Kicked
     int64 job_id = 1;
 }
+
+message KickNRequest {
+    // Refer Job.tube_name
+    string tube_name = 1;
+
+    // bound is the maximum number of jobs to kick
+    int32 bound = 2;
+}
+
+message KickNResponse {
+    // The actual number of jobs kicked
+    int32 jobs_kicked = 1;
+}
+
 
 ////////////////////////////////////////////////////////////////////////
 
@@ -259,6 +284,9 @@ enum OpType {
     DELETE = 4;
     RELEASE = 5;
     CHECK_CLIENT_STATE = 6;
+    BURY = 7;
+    KICK = 8;
+    KICKN = 9;
 }
 
 // C & P from GRPC error codes

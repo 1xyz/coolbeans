@@ -377,11 +377,29 @@ func (f *fsm) Apply(l *raft.Log) interface{} {
 	logc.Infof("op-type %v now %v", applyReq.Op, applyReq.NowSecs)
 
 	switch applyReq.Op {
+	case v1.OpType_BURY:
+		var bReq v1.BuryRequest
+		unmarshalP(applyReq.Body, &bReq)
+		bResp, err := f.ApplyBury(applyReq.NowSecs, &bReq)
+		return newApplyRespBytes(bResp, err)
+
 	case v1.OpType_DELETE:
 		var dReq v1.DeleteRequest
 		unmarshalP(applyReq.Body, &dReq)
 		dResp, err := f.ApplyDelete(&dReq)
 		return newApplyRespBytes(dResp, err)
+
+	case v1.OpType_KICK:
+		var kReq v1.KickRequest
+		unmarshalP(applyReq.Body, &kReq)
+		kResp, err := f.ApplyKick(&kReq)
+		return newApplyRespBytes(kResp, err)
+
+	case v1.OpType_KICKN:
+		var knReq v1.KickNRequest
+		unmarshalP(applyReq.Body, &knReq)
+		kResp, err := f.ApplyKickN(&knReq)
+		return newApplyRespBytes(kResp, err)
 
 	case v1.OpType_PUT:
 		var pReq v1.PutRequest
@@ -486,6 +504,41 @@ func (f *fsm) ApplyDelete(req *v1.DeleteRequest) (*v1.Empty, error) {
 	}
 
 	return &v1.Empty{}, nil
+}
+
+func (f *fsm) ApplyBury(nowSecs int64, req *v1.BuryRequest) (*v1.Empty, error) {
+	cu := NewClientURI(req.ProxyId, req.ClientId)
+	if err := cu.Validate(); err != nil {
+		log.Errorf("ApplyBury: clientUri.validate %v", err)
+		return nil, err
+	}
+
+	err := f.jsm.Bury(nowSecs, state.JobID(req.JobId), req.Priority, cu.ToClientID())
+	if err != nil {
+		return nil, err
+	}
+
+	return &v1.Empty{}, nil
+}
+
+func (f *fsm) ApplyKick(req *v1.KickRequest) (*v1.Empty, error) {
+	err := f.jsm.Kick(state.JobID(req.JobId))
+	if err != nil {
+		return nil, err
+	}
+
+	return &v1.Empty{}, nil
+}
+
+func (f *fsm) ApplyKickN(req *v1.KickNRequest) (*v1.KickNResponse, error) {
+	jobsKicked, err := f.jsm.KickN(state.TubeName(req.TubeName), int(req.Bound))
+	if err != nil {
+		return nil, err
+	}
+
+	return &v1.KickNResponse{
+		JobsKicked: int32(jobsKicked),
+	}, nil
 }
 
 func (f *fsm) ApplyRelease(req *v1.ReleaseRequest) (*v1.Empty, error) {

@@ -220,15 +220,53 @@ func (c *Client) Delete(jobID state.JobID, clientID state.ClientID) error {
 }
 
 func (c *Client) Bury(nowSeconds int64, jobID state.JobID, priority uint32, clientID state.ClientID) error {
-	return nil
+	ctx, cancel := context.WithTimeout(context.Background(), c.ConnTimeout)
+	defer cancel()
+
+	_, err := c.jsmClient.Bury(ctx, &v1.BuryRequest{
+		JobId:    int64(jobID),
+		Priority: priority,
+		ClientId: string(clientID),
+		ProxyId:  c.ProxyID,
+	})
+
+	if err != nil {
+		log.Errorf("proxy.client: c.jsmClient.Bury err=%v", err)
+	}
+
+	return err
 }
 
 func (c *Client) Kick(jobID state.JobID) error {
-	return nil
+	ctx, cancel := context.WithTimeout(context.Background(), c.ConnTimeout)
+	defer cancel()
+
+	_, err := c.jsmClient.Kick(ctx, &v1.KickRequest{
+		JobId: int64(jobID),
+	})
+
+	if err != nil {
+		log.Errorf("proxy.client: c.jsmClient.Kick err=%v", err)
+	}
+
+	return err
 }
 
 func (c *Client) KickN(name state.TubeName, n int) (int, error) {
-	return 0, nil
+	ctx, cancel := context.WithTimeout(context.Background(), c.ConnTimeout)
+	defer cancel()
+
+	resp, err := c.jsmClient.KickN(ctx, &v1.KickNRequest{
+		TubeName: string(name),
+		Bound:    int32(n),
+	})
+
+	if err != nil {
+		log.Errorf("proxy.client: c.jsmClient.KickN err=%v", err)
+		return 0, err
+	}
+
+	return int(resp.JobsKicked), err
 }
 
 func (c *Client) Tick(nowSeconds int64) ([]*state.Reservation, error) {

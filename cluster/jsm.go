@@ -70,6 +70,36 @@ func (j *JSMServer) Release(ctx context.Context, req *v1.ReleaseRequest) (*v1.Em
 	return &resp, nil
 }
 
+func (j *JSMServer) Bury(ctx context.Context, req *v1.BuryRequest) (*v1.Empty, error) {
+	var resp v1.Empty
+	if err := j.performApply(v1.OpType_BURY, req, &resp); err != nil {
+		log.Errorf("jsmServer.Bury: performApply. Err=%v", err)
+		return nil, err
+	}
+
+	return &resp, nil
+}
+
+func (j *JSMServer) Kick(ctx context.Context, req *v1.KickRequest) (*v1.Empty, error) {
+	var resp v1.Empty
+	if err := j.performApply(v1.OpType_KICK, req, &resp); err != nil {
+		log.Errorf("jsmServer.Kick: performApply. Err=%v", err)
+		return nil, err
+	}
+
+	return &resp, nil
+}
+
+func (j *JSMServer) KickN(ctx context.Context, req *v1.KickNRequest) (*v1.KickNResponse, error) {
+	var resp v1.KickNResponse
+	if err := j.performApply(v1.OpType_KICKN, req, &resp); err != nil {
+		log.Errorf("jsmServer.Kick: performApply. Err=%v", err)
+		return nil, err
+	}
+
+	return &resp, nil
+}
+
 func (j *JSMServer) Reserve(ctx context.Context, req *v1.ReserveRequest) (*v1.ReserveResponse, error) {
 	var resp v1.ReserveResponse
 	log.Infof("Reserve: proxyID=%v clientID=%v timeout=%v watchedTubes=%v",
