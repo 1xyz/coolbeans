@@ -137,10 +137,16 @@ func (c *cmdProcessor) processRequest(req *CmdRequest) {
 	var resp *CmdResponse = nil
 	closeResp := false
 	switch req.CmdType {
+	case Bury:
+		resp = c.bury(cli, req)
 	case Delete:
 		resp = c.delete(cli, req)
 	case Ignore:
 		resp = c.ignore(cli, req)
+	case Kick:
+		resp = c.kickN(cli, req)
+	case KickJob:
+		resp = c.kick(cli, req)
 	case Put:
 		resp = c.put(cli, req)
 	case Reserve:
@@ -190,6 +196,24 @@ func (c *cmdProcessor) put(cli *client, req *CmdRequest) *CmdResponse {
 	return resp
 }
 
+func (c *cmdProcessor) bury(cli *client, req *CmdRequest) *CmdResponse {
+	resp := NewCmdResponseFromReq(req)
+	cmd, ok := req.cmd.(*buryArg)
+	if !ok {
+		// Note: this is indicative of code-bug where the CmdType and cmd don't match up
+		log.Panicf("cmdProcessor.bury: cast-error, cannot cast to *buryArg")
+	}
+
+	err := c.jsm.Bury(nowSeconds(), cmd.id, cmd.pri, cli.id)
+	if err != nil {
+		resp.setResponse(MsgNotFound)
+	} else {
+		resp.setResponse("BURIED")
+	}
+
+	return resp
+}
+
 func (c *cmdProcessor) delete(cli *client, req *CmdRequest) *CmdResponse {
 	ctxLog := logCtx(req, "cmdProcessor.delete")
 	resp := NewCmdResponseFromReq(req)
@@ -229,6 +253,42 @@ func (c *cmdProcessor) ignore(cli *client, req *CmdRequest) *CmdResponse {
 		}
 	} else {
 		resp.setResponse(MsgCannotIgnoreTube)
+	}
+
+	return resp
+}
+
+func (c *cmdProcessor) kick(cli *client, req *CmdRequest) *CmdResponse {
+	resp := NewCmdResponseFromReq(req)
+	cmd, ok := req.cmd.(*idArg)
+	if !ok {
+		// Note: this is indicative of code-bug where the CmdType and cmd don't match up
+		log.Panicf("cmdProcessor.kick: cast-error, cannot cast to *idArg")
+	}
+
+	err := c.jsm.Kick(cmd.id)
+	if err != nil {
+		resp.setResponse(MsgNotFound)
+	} else {
+		resp.setResponse("KICKED")
+	}
+
+	return resp
+}
+
+func (c *cmdProcessor) kickN(cli *client, req *CmdRequest) *CmdResponse {
+	resp := NewCmdResponseFromReq(req)
+	cmd, ok := req.cmd.(*kickNArg)
+	if !ok {
+		// Note: this is indicative of code-bug where the CmdType and cmd don't match up
+		log.Panicf("cmdProcessor.kickN: cast-error, cannot cast to *kickNArg")
+	}
+
+	n, err := c.jsm.KickN(cli.useTube, cmd.bound)
+	if err != nil {
+		resp.setResponse(MsgInternalError)
+	} else {
+		resp.setResponse(fmt.Sprintf("KICKED %d", n))
 	}
 
 	return resp
@@ -394,8 +454,12 @@ func NewCmdRequest(cmdData *CmdData, clientID state.ClientID) (CmdRequest, error
 
 	var err error = nil
 	switch cmdData.CmdType {
-	case Delete:
+	case Bury:
+		cmdRequest.cmd, err = NewBuryArg(cmdData)
+	case Delete, KickJob:
 		cmdRequest.cmd, err = NewIDArg(cmdData)
+	case Kick:
+		cmdRequest.cmd, err = NewKickNArg(cmdData)
 	case Put:
 		cmdRequest.cmd, err = NewPutArg(cmdData)
 	case Ignore, Use, Watch:

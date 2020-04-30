@@ -17,6 +17,8 @@ const (
 	delay              = 5 * time.Second
 	msgErrTimeout      = "reserve-with-timeout: timeout"
 	msgErrDeadlineSoon = "reserve-with-timeout: deadline soon"
+	msgErrBuryNotFound = "bury: not found"
+	msgErrKickNotFound = "kick-job: not found"
 )
 
 func TestProtocol_Put(t *testing.T) {
@@ -242,6 +244,58 @@ func TestProtocol_Reserve_Timeout(t *testing.T) {
 				So(err, ShouldNotBeNil)
 				So(err.Error(), ShouldEqual, msgErrTimeout)
 			}
+		})
+	})
+}
+
+func TestProtocol_Bury_Kick(t *testing.T) {
+	Convey("when a producer put a job to a specific tube", t, func() {
+		tubeName := randStr(6)
+		prodTube := beanstalk.Tube{Conn: newConn(t), Name: tubeName}
+		defer prodTube.Conn.Close()
+		jobId, _ := prodTube.Put([]byte("garbanzo beans"), 1, 0, putTTR)
+
+		Convey("which is reserved by a consumer", func() {
+			tubes := beanstalk.NewTubeSet(newConn(t), tubeName)
+			defer tubes.Conn.Close()
+			id, _, _ := tubes.Reserve(reserveTimeout)
+
+			Convey("another consumer cannot bury that reserved job", func() {
+				conn := newConn(t)
+				defer conn.Close()
+				err := conn.Bury(id, 3)
+				So(err.Error(), ShouldEqual, msgErrBuryNotFound)
+			})
+
+			Convey("only that consumer can bury that job", func() {
+				err := tubes.Conn.Bury(id, 3)
+				So(err, ShouldBeNil)
+
+				Convey("and anyone can kick that job", func() {
+					conn := newConn(t)
+					defer conn.Close()
+					err := conn.KickJob(id)
+					So(err, ShouldBeNil)
+				})
+
+				Convey("and anyone kick that job with a bound", func() {
+					tube := beanstalk.Tube{
+						Conn: newConn(t),
+						Name: tubeName,
+					}
+					defer tube.Conn.Close()
+					n, err := tube.Kick(3)
+					So(err, ShouldBeNil)
+					So(n, ShouldEqual, 1)
+				})
+			})
+		})
+
+		Convey("kicking an unreserved job leads to nothing", func() {
+			conn := newConn(t)
+			defer conn.Close()
+			err := conn.KickJob(jobId)
+			So(err.Error(), ShouldEqual, msgErrKickNotFound)
 		})
 	})
 }

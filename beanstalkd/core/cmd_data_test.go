@@ -172,3 +172,63 @@ func TestReserveWithTimeoutArg(t *testing.T) {
 		assert.Equalf(t, e.outArg, tc, e.msg)
 	}
 }
+
+func TestBuryArg(t *testing.T) {
+	// bury <id> <pri>
+	var entries = []struct {
+		inArg  string
+		outArg *buryArg
+		err    error
+		msg    string
+	}{
+		{"101 255", &buryArg{pri: 255, id: 101}, nil,
+			"expect valid bury arg"},
+		{"100", nil, ErrBadFormat,
+			"bury args must have exact arg count"},
+		{"10 100 30 ", nil, ErrBadFormat,
+			"bury args must have exact arg count"},
+		{"32898abc 11", nil, ErrBadFormat,
+			"bury args must have numeric args"},
+	}
+
+	for _, e := range entries {
+		d := &CmdData{
+			CmdType:  Unknown,
+			Args:     e.inArg,
+			Data:     nil,
+			NeedData: false,
+		}
+		pa, err := NewBuryArg(d)
+		assert.Equalf(t, e.err, err, e.msg)
+		assert.Equalf(t, e.outArg, pa, e.msg)
+	}
+}
+
+func TestKickArg(t *testing.T) {
+	// bury <id> <pri>
+	var entries = []struct {
+		inArg  string
+		outArg *kickNArg
+		err    error
+		msg    string
+	}{
+		{"101", &kickNArg{bound: 101}, nil,
+			"expect valid arg"},
+		{"10 100 30 ", nil, ErrBadFormat,
+			"must have exact arg count"},
+		{"32898abc", nil, ErrBadFormat,
+			"args must have numeric args"},
+	}
+
+	for _, e := range entries {
+		d := &CmdData{
+			CmdType:  Unknown,
+			Args:     e.inArg,
+			Data:     nil,
+			NeedData: false,
+		}
+		pa, err := NewKickNArg(d)
+		assert.Equalf(t, e.err, err, e.msg)
+		assert.Equalf(t, e.outArg, pa, e.msg)
+	}
+}

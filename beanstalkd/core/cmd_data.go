@@ -86,11 +86,19 @@ var (
 	// tube arg regex -- watch <tube> | ignore <tube> | use <tube>
 	tubeArgRe = regexp.MustCompile(`(?P<tube>^\w{1,200}$)`)
 
-	// id arg regex -- delete <id>
+	// id arg regex --
+	// delete <id>
+	// kick-job <id>
 	idArgRe = regexp.MustCompile(`(?P<id>^\d+$)`)
 
 	// reserve-with-timeout regex -- reserve-with-timeout <seconds>
 	reserveWithTimeoutRe = regexp.MustCompile(`(?P<seconds>^\d+$)`)
+
+	// bury <id> <pri>
+	buryArgRe = regexp.MustCompile(`^(?P<id>^\d+) (?P<pri>\d+)$`)
+
+	// kick <bound>
+	kickNArgRe = regexp.MustCompile(`(?P<bound>^\d+$)`)
 )
 
 type putArg struct {
@@ -205,5 +213,56 @@ func NewReserveWithTimeoutArg(data *CmdData) (*reserveWithTimeoutArg, error) {
 
 	return &reserveWithTimeoutArg{
 		timeoutSeconds: timeoutSeconds,
+	}, nil
+}
+
+type buryArg struct {
+	id  state.JobID
+	pri uint32
+}
+
+func NewBuryArg(data *CmdData) (*buryArg, error) {
+	tm, ok := matchNamedGroups(data.Args, buryArgRe)
+	if !ok {
+		log.Errorf("NewBuryArg: matchNamedGroups ok=false")
+		return nil, ErrBadFormat
+	}
+
+	id, err := strconv.ParseUint(tm["id"], 10, 64)
+	if err != nil {
+		log.Errorf("NewBuryArg: ParseUint(id) err=%v", err)
+		return nil, ErrBadFormat
+	}
+
+	pri, err := strconv.ParseUint(tm["pri"], 10, 32)
+	if err != nil {
+		log.Errorf("NewBuryArg: ParseUint(pri) err=%v", err)
+		return nil, ErrBadFormat
+	}
+
+	return &buryArg{
+		id:  state.JobID(id),
+		pri: uint32(pri),
+	}, nil
+}
+
+type kickNArg struct {
+	bound int
+}
+
+func NewKickNArg(data *CmdData) (*kickNArg, error) {
+	tm, ok := matchNamedGroups(data.Args, kickNArgRe)
+	if !ok {
+		log.Errorf("NewKickNArg: matchNamedGroups ok=false")
+		return nil, ErrBadFormat
+	}
+
+	bound, err := strconv.Atoi(tm["bound"])
+	if err != nil {
+		log.Errorf("NewKickNArg: atoi(bound) %v", err)
+		return nil, ErrBadFormat
+	}
+	return &kickNArg{
+		bound: bound,
 	}, nil
 }
