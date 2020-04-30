@@ -11,15 +11,16 @@ import (
 )
 
 const (
-	serverAddr          = "127.0.0.1:11300"
-	putTTR              = 10 * time.Second
-	reserveTimeout      = 2 * time.Second
-	delay               = 5 * time.Second
-	msgErrTimeout       = "reserve-with-timeout: timeout"
-	msgErrDeadlineSoon  = "reserve-with-timeout: deadline soon"
-	msgErrBuryNotFound  = "bury: not found"
-	msgErrKickNotFound  = "kick-job: not found"
-	msgErrTouchNotFound = "touch: not found"
+	serverAddr            = "127.0.0.1:11300"
+	putTTR                = 10 * time.Second
+	reserveTimeout        = 2 * time.Second
+	delay                 = 5 * time.Second
+	msgErrTimeout         = "reserve-with-timeout: timeout"
+	msgErrDeadlineSoon    = "reserve-with-timeout: deadline soon"
+	msgErrBuryNotFound    = "bury: not found"
+	msgErrKickNotFound    = "kick-job: not found"
+	msgErrTouchNotFound   = "touch: not found"
+	msgErrReleaseNotFound = "release: not found"
 )
 
 func TestProtocol_Put(t *testing.T) {
@@ -331,6 +332,45 @@ func TestProtocol_Touch(t *testing.T) {
 			defer conn.Close()
 			err := conn.Touch(jobID)
 			So(err.Error(), ShouldEqual, msgErrTouchNotFound)
+		})
+	})
+}
+
+func TestProtocol_Release(t *testing.T) {
+	Convey("when a producer put a job to a specific tube", t, func() {
+		tubeName := randStr(6)
+		prodTube := beanstalk.Tube{Conn: newConn(t), Name: tubeName}
+		defer prodTube.Conn.Close()
+		jobID, _ := prodTube.Put([]byte("garbanzo beans"), 1, 0, putTTR)
+
+		Convey("which is reserved by a consumer", func() {
+			tubes := beanstalk.NewTubeSet(newConn(t), tubeName)
+			defer tubes.Conn.Close()
+			id, _, _ := tubes.Reserve(reserveTimeout)
+
+			Convey("another consumer cannot release that reserved job", func() {
+				conn := newConn(t)
+				defer conn.Close()
+				err := conn.Release(id, 10, 0)
+				So(err.Error(), ShouldEqual, msgErrReleaseNotFound)
+			})
+
+			Convey("only that consumer can release that job", func() {
+				err := tubes.Conn.Release(id, 10, 0)
+				So(err, ShouldBeNil)
+			})
+
+			Convey("only that consumer can release that job with a delay", func() {
+				err := tubes.Conn.Release(id, 10, 10)
+				So(err, ShouldBeNil)
+			})
+		})
+
+		Convey("touch an unreserved job leads to nothing", func() {
+			conn := newConn(t)
+			defer conn.Close()
+			err := conn.Release(jobID, 10, 0)
+			So(err.Error(), ShouldEqual, msgErrReleaseNotFound)
 		})
 	})
 }

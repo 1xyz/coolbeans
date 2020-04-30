@@ -149,6 +149,8 @@ func (c *cmdProcessor) processRequest(req *CmdRequest) {
 		resp = c.kick(cli, req)
 	case Put:
 		resp = c.put(cli, req)
+	case Release:
+		resp = c.releaseWith(cli, req)
 	case Reserve:
 		c.reserve(cli, req)
 	case ReserveWithTimeout:
@@ -291,6 +293,24 @@ func (c *cmdProcessor) kickN(cli *client, req *CmdRequest) *CmdResponse {
 		resp.setResponse(MsgInternalError)
 	} else {
 		resp.setResponse(fmt.Sprintf("KICKED %d", n))
+	}
+
+	return resp
+}
+
+func (c *cmdProcessor) releaseWith(cli *client, req *CmdRequest) *CmdResponse {
+	resp := NewCmdResponseFromReq(req)
+	cmd, ok := req.cmd.(*releaseArg)
+	if !ok {
+		// Note: this is indicative of code-bug where the CmdType and cmd don't match up
+		log.Panicf("cmdProcessor.kickN: cast-error, cannot cast to *releaseArg")
+	}
+
+	err := c.jsm.ReleaseWith(nowSeconds(), cmd.id, cli.id, cmd.pri, cmd.delay)
+	if err != nil {
+		resp.setResponse(MsgNotFound)
+	} else {
+		resp.setResponse("RELEASED")
 	}
 
 	return resp
@@ -484,6 +504,8 @@ func NewCmdRequest(cmdData *CmdData, clientID state.ClientID) (CmdRequest, error
 		cmdRequest.cmd, err = NewPutArg(cmdData)
 	case Ignore, Use, Watch:
 		cmdRequest.cmd, err = NewTubeArg(cmdData)
+	case Release:
+		cmdRequest.cmd, err = NewReleaseArg(cmdData)
 	case ReserveWithTimeout:
 		cmdRequest.cmd, err = NewReserveWithTimeoutArg(cmdData)
 	case Touch:

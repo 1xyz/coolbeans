@@ -277,7 +277,7 @@ type releaseArg struct {
 }
 
 func NewReleaseArg(data *CmdData) (*releaseArg, error) {
-	tm, ok := matchNamedGroups(data.Args, buryArgRe)
+	tm, ok := matchNamedGroups(data.Args, releaseArgRe)
 	if !ok {
 		log.Errorf("NewReleaseArg: matchNamedGroups ok=false")
 		return nil, ErrBadFormat
