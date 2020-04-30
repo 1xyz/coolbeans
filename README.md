@@ -30,9 +30,10 @@ This section walks through the process of building the source and running coolbe
 
 Coolbeans is written in golang, it requires go1.13 or newer. It is recommended to use [go version manager](https://github.com/moovweb/gvm) to manage multiple go versions.
 
-Optionally, a Dockerfile and compose file is provided. This requires Docker ver 17 or newer. Refer [docker docs](https://docs.docker.com/) on how to install.
+A Dockerfile and compose file is provided. This requires Docker version 17 or newer. Refer [docker docs](https://docs.docker.com/) on how to install.
 
-The project depends on protocol buffers, ensure that you have protoc installed. Refer [here](https://github.com/protocolbuffers/protobuf/blob/master/src/README.md) or [here](https://formulae.brew.sh/formula/protobuf)
+The project depends on protocol buffers:
+- Ensure you have protoc & protoc-gen-go installed and accessible in your paths. [This](https://grpc.io/docs/quickstart/go/#protocol-buffers) is an excellent resource which has steps on how to get started. 
 
 ### Build & run the binary.
 
@@ -40,7 +41,7 @@ The [Makefile](./Makefile) provides different target options to build and run fr
 
 To explore these options: 
 
-    `make`
+    make
 
 Generate a statically linked binary to the local environment:
 
@@ -49,6 +50,10 @@ Generate a statically linked binary to the local environment:
 Run a single node cluster. Note this spawns two processes, a cluster-node process and beanstalkd proxy.:
 
     make run-single
+
+Run a three node cluster. Note this spawns four processes, three cluster-node process and beanstalkd proxy.:
+
+    make run-cluster
 
 Releases
 --------
