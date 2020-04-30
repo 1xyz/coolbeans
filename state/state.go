@@ -268,9 +268,9 @@ type JSM interface {
 
 	// // Release this job into the delayed state (from a reserved to delay state)
 	// ReleaseWithDelay(jobID uint64, CliID string, delaySeconds int) error
-	//
-	// // Extend a reserved job's reservation TTL by its TTR (time-to-run)
-	// Touch(jobID uint64) error
+
+	// Extend a reserved job's reservation TTL by its TTR (time-to-run)
+	Touch(nowSeconds int64, jobID JobID, clientID ClientID) error
 
 	// Bury this job (from a reserved state)
 	Bury(nowSeconds int64, jobID JobID, priority uint32, clientID ClientID) error

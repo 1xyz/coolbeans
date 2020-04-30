@@ -24,6 +24,9 @@ var (
 	// ErrInvalidJobTransition - the current state of the job prevents this transition
 	ErrInvalidJobTransition = errors.New("invalid transition")
 
+	// ErrInvalidOperation - The state indicates that this op cannot be done
+	ErrInvalidOperation = errors.New("invalid operation due to the current state")
+
 	// ErrUnauthorizedOperation - This state requires a matching client to perform this transition
 	ErrUnauthorizedOperation = errors.New("client is not authorized to perform this operation")
 

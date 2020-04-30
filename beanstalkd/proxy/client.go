@@ -269,6 +269,10 @@ func (c *Client) KickN(name state.TubeName, n int) (int, error) {
 	return int(resp.JobsKicked), err
 }
 
+func (c *Client) Touch(nowSeconds int64, jobID state.JobID, clientID state.ClientID) error {
+	return nil
+}
+
 func (c *Client) Tick(nowSeconds int64) ([]*state.Reservation, error) {
 	result := make([]*state.Reservation, 0)
 	entries := c.rq.Drain()

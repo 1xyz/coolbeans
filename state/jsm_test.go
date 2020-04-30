@@ -340,6 +340,54 @@ func TestLocalJSM_KickN(t *testing.T) {
 	}
 }
 
+func TestLocalJSM_Touch_ReservedJob(t *testing.T) {
+	jsm := newTestJsm(t)
+	tubes := []TubeName{"foo"}
+	clientID := ClientID("client-123")
+	j := putTestJob(t, jsm, tubes[0], false)
+	r := createTestResv(t, jsm, clientID, tubes, 30)
+	if r.Status != Matched {
+		t.Fatalf("expect reservation to be matched")
+	}
+
+	oldExpiresAt := j.ExpiresAt()
+	var delta int64 = 10
+	err := jsm.Touch(testNowSecs()+delta, j.ID(), clientID)
+	assert.Nilf(t, err, "expect err to be nil")
+	assert.Greaterf(t, j.ExpiresAt(), oldExpiresAt, "Expect expiresAt to be updated")
+	assert.Equalf(t, j.State(), Reserved, "Expecte state to be Reserved")
+}
+
+func TestLocalJSM_Touch_NonReservedJob(t *testing.T) {
+	jsm := newTestJsm(t)
+	tubes := []TubeName{"foo"}
+	clientID := ClientID("client-123")
+	j := putTestJob(t, jsm, tubes[0], false)
+
+	err := jsm.Touch(testNowSecs(), j.ID(), clientID)
+	assert.Equalf(t, ErrInvalidOperation, err, "expect err to be ErrInvalidOperation")
+}
+
+func TestLocalJSM_Touch_UnknownJob(t *testing.T) {
+	jsm := newTestJsm(t)
+	err := jsm.Touch(testNowSecs(), JobID(123), ClientID("client-123"))
+	assert.Equalf(t, ErrEntryMissing, err, "expect err to be ErrEntryMissing")
+}
+
+func TestLocalJSM_Touch_UnauthorizedClient(t *testing.T) {
+	jsm := newTestJsm(t)
+	tubes := []TubeName{"foo"}
+	clientID := ClientID("client-123")
+	j := putTestJob(t, jsm, tubes[0], false)
+	r := createTestResv(t, jsm, clientID, tubes, 30)
+	if r.Status != Matched {
+		t.Fatalf("expect reservation to be matched")
+	}
+
+	err := jsm.Touch(testNowSecs()+10, j.ID(), ClientID("foo"))
+	assert.Equalf(t, ErrUnauthorizedOperation, err, "expect err to be ErrUnauthorizedOperation")
+}
+
 func buryNJobs(t *testing.T, jsm *localJSM, n int, tubeName TubeName) []Job {
 	jobs := make([]Job, n)
 	clientID := ClientID("foobar")

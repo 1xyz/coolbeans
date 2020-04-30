@@ -188,6 +188,46 @@ func (jsm *localJSM) Release(jobID JobID, clientID ClientID) error {
 	return jsm.fromReservedToReady(jobID, clientID)
 }
 
+// Update this jobs TTR
+func (jsm *localJSM) Touch(nowSeconds int64, jobID JobID, clientID ClientID) error {
+	e, err := jsm.jobs.Get(jobID)
+	if err != nil {
+		return err
+	}
+
+	if e.job.State() != Reserved {
+		return ErrInvalidOperation
+	}
+
+	if len(clientID) > 0 && e.job.ReservedBy() != clientID {
+		return ErrUnauthorizedOperation
+	}
+
+	_, err = jsm.reservedJobs.Remove(e.entry)
+	if err != nil {
+		return err
+	}
+
+	if _, err := e.job.UpdateReservation(nowSeconds); err != nil {
+		return err
+	}
+
+	// enqueue again, so that the job's reservation heap is fixed
+	if je, err := jsm.reservedJobs.Enqueue(clientID, e.job); err != nil {
+		return err
+	} else {
+		e.entry = je
+	}
+
+	cli, err := jsm.clients.Find(clientID)
+	if err != nil {
+		return err
+	}
+
+	jsm.updateClientTickAt(cli)
+	return nil
+}
+
 // Bury this job (from a reserved state)
 func (jsm *localJSM) Bury(nowSeconds int64, jobID JobID, priority uint32, clientID ClientID) error {
 	return jsm.fromReservedToBuried(nowSeconds, jobID, priority, clientID)
