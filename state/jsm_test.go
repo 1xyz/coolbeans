@@ -48,7 +48,7 @@ func TestLocalJSM_NextDelayedJob(t *testing.T) {
 	jsm := newTestJsm(t)
 	j := putTestJob(t, jsm, tubeName, true)
 
-	j2, err := jsm.NextDelayedJob(tubeName)
+	j2, err := jsm.PeekDelayedJob(tubeName)
 	assert.Nilf(t, err, "expect err to be nil")
 	assert.NotNilf(t, j2, "expect job to be not nil")
 	assert.Equalf(t, j.ID(), j2.ID(), "expect the id's to match")
@@ -56,7 +56,7 @@ func TestLocalJSM_NextDelayedJob(t *testing.T) {
 
 func TestLocalJSM_NextDelayedJob_ErrMissing(t *testing.T) {
 	jsm := newTestJsm(t)
-	_, err := jsm.NextDelayedJob(TubeName("foo"))
+	_, err := jsm.PeekDelayedJob(TubeName("foo"))
 	assert.Equalf(t, ErrEntryMissing, err, "expected ErrEntryMissing")
 }
 
@@ -65,7 +65,7 @@ func TestLocalJSM_NextReadyJob(t *testing.T) {
 	jsm := newTestJsm(t)
 	j := putTestJob(t, jsm, tubeName, false)
 
-	j2, err := jsm.NextReadyJob(tubeName)
+	j2, err := jsm.PeekReadyJob(tubeName)
 	assert.Nilf(t, err, "expect err to be nil")
 	assert.NotNilf(t, j2, "expect job to be not nil")
 	assert.Equalf(t, j.ID(), j2.ID(), "expect the id's to match")
@@ -73,7 +73,7 @@ func TestLocalJSM_NextReadyJob(t *testing.T) {
 
 func TestLocalJSM_NextReadyJob_ErrMissing(t *testing.T) {
 	jsm := newTestJsm(t)
-	_, err := jsm.NextReadyJob(TubeName("foo"))
+	_, err := jsm.PeekReadyJob(TubeName("foo"))
 	assert.Equalf(t, ErrEntryMissing, err, "expected ErrEntryMissing")
 }
 
@@ -85,7 +85,7 @@ func TestLocalJSM_Ready(t *testing.T) {
 	err := jsm.Ready(j.ID())
 	assert.Nilf(t, err, "expect err to be nil")
 
-	j2, err := jsm.NextReadyJob(tubeName)
+	j2, err := jsm.PeekReadyJob(tubeName)
 	assert.Nilf(t, err, "expect err to be nil")
 	assert.NotNilf(t, j2, "expect job to be not nil")
 	assert.Equalf(t, j.ID(), j2.ID(), "expect the id's to match")
@@ -167,6 +167,42 @@ func TestLocalJSM_Release_ErrUnauthorizedOperation(t *testing.T) {
 	err := jsm.Release(j.ID(), ClientID("foofoo"))
 	assert.Equalf(t, ErrUnauthorizedOperation, err,
 		"expect err to be ErrUnauthorizedOperation")
+}
+
+func TestLocalJSM_ReleaseWith_ToReady(t *testing.T) {
+	jsm := newTestJsm(t)
+	clientId := ClientID("foobar")
+	j := putTestJob(t, jsm, TubeName("foo"), false)
+	if err := jsm.Reserve(testNowSecs(), j.ID(), clientId); err != nil {
+		t.Fatalf("reserve error %v", err)
+	}
+
+	newPri := j.Priority() + 10
+	err := jsm.ReleaseWith(testNowSecs(), j.ID(), clientId, newPri, 0)
+	assert.Nilf(t, err, "expect err to be nil")
+	assert.Equalf(t, Ready, j.State(), "Expect job state to be ready")
+	assert.Equalf(t, newPri, j.Priority(), "Expect job Priority to be updated")
+	assert.Equalf(t, ClientID(""), j.ReservedBy(), "Expect job to not be reserved by foobar")
+}
+
+func TestLocalJSM_ReleaseWith_ToDelayed(t *testing.T) {
+	jsm := newTestJsm(t)
+	clientId := ClientID("foobar")
+	j := putTestJob(t, jsm, TubeName("foo"), false)
+	if err := jsm.Reserve(testNowSecs(), j.ID(), clientId); err != nil {
+		t.Fatalf("reserve error %v", err)
+	}
+
+	now := testNowSecs()
+	newPri := j.Priority() + 10
+	newDelay := int64(30)
+	err := jsm.ReleaseWith(now, j.ID(), clientId, newPri, newDelay)
+	assert.Nilf(t, err, "expect err to be nil")
+	assert.Equalf(t, Delayed, j.State(), "Expect job state to be ready")
+	assert.Equalf(t, newPri, j.Priority(), "Expect job Priority to be updated")
+	assert.Equalf(t, ClientID(""), j.ReservedBy(), "Expect job to not be reserved by foobar")
+	assert.Equalf(t, now+newDelay, j.ReadyAt(), "Expect job readyAt updated")
+	assert.Equalf(t, newDelay, j.Delay(), "Expect job Delay to be updated")
 }
 
 func TestLocalJSM_Release_ErrInvalidJobTransition(t *testing.T) {

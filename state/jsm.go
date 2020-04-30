@@ -158,11 +158,11 @@ func (jsm *localJSM) Delete(jobID JobID, clientID ClientID) error {
 	return nil
 }
 
-func (jsm *localJSM) NextDelayedJob(tubeName TubeName) (Job, error) {
+func (jsm *localJSM) PeekDelayedJob(tubeName TubeName) (Job, error) {
 	return jsm.tubes.NextDelayedJob(tubeName)
 }
 
-func (jsm *localJSM) NextReadyJob(tubeName TubeName) (Job, error) {
+func (jsm *localJSM) PeekReadyJob(tubeName TubeName) (Job, error) {
 	return jsm.tubes.NextReadyJob(tubeName)
 }
 
@@ -170,7 +170,7 @@ func (jsm *localJSM) NextReservedJob(clientID ClientID) (Job, error) {
 	return jsm.reservedJobs.NextReservedJob(clientID)
 }
 
-func (jsm *localJSM) NextBuriedJob(tubeName TubeName) (Job, error) {
+func (jsm *localJSM) PeekBuriedJob(tubeName TubeName) (Job, error) {
 	return jsm.tubes.NextBuriedJob(tubeName)
 }
 
@@ -185,7 +185,16 @@ func (jsm *localJSM) Reserve(nowSeconds int64, jobID JobID, clientID ClientID) e
 
 // Release this job to the ready state (from a reserved to ready state)
 func (jsm *localJSM) Release(jobID JobID, clientID ClientID) error {
-	return jsm.fromReservedToReady(jobID, clientID)
+	return jsm.fromReservedToReady(jobID, clientID, 0, false /*updatePri*/)
+}
+
+// ReleaseWith transitions this reserved job to a Ready or Delayed state with a modified priority
+func (jsm *localJSM) ReleaseWith(nowSeconds int64, jobID JobID, clientID ClientID, pri uint32, delay int64) error {
+	if delay == 0 {
+		return jsm.fromReservedToReady(jobID, clientID, pri, true /*updatePri*/)
+	}
+
+	return jsm.fromReservedToDelayed(nowSeconds, jobID, clientID, pri, delay)
 }
 
 // Update this jobs TTR
@@ -242,11 +251,11 @@ func (jsm *localJSM) Kick(jobID JobID) error {
 func (jsm *localJSM) KickN(tubeName TubeName, n int) (int, error) {
 	var count = 0
 	for i := 0; i < n; i++ {
-		j, err := jsm.NextBuriedJob(tubeName)
+		j, err := jsm.PeekBuriedJob(tubeName)
 		if err == ErrEntryMissing {
 			return count, nil
 		} else if err != nil {
-			log.Errorf("jsm.KickN: jsm.NextBuriedJob err = %v", err)
+			log.Errorf("jsm.KickN: jsm.PeekBuriedJob err = %v", err)
 			return 0, nil
 		}
 
@@ -326,7 +335,7 @@ func (jsm *localJSM) fromDelayedToReady(jobID JobID) error {
 	}
 }
 
-func (jsm *localJSM) fromReservedToReady(jobID JobID, clientID ClientID) error {
+func (jsm *localJSM) fromReservedToReady(jobID JobID, clientID ClientID, pri uint32, updatePri bool) error {
 	e, err := jsm.jobs.Get(jobID)
 	if err != nil {
 		return err
@@ -343,12 +352,52 @@ func (jsm *localJSM) fromReservedToReady(jobID JobID, clientID ClientID) error {
 		return err
 	}
 
+	if updatePri {
+		e.job.UpdatePriority(pri)
+	}
+
 	e.job.UpdateState(Ready)
 	e.job.UpdateReservedBy("")
 	if je, err := jsm.tubes.EnqueueReadyJob(e.job); err != nil {
 		return err
 	} else {
 		e.entry = je
+		return nil
+	}
+}
+
+func (jsm *localJSM) fromReservedToDelayed(nowSeconds int64, jobID JobID, clientID ClientID, pri uint32, delay int64) error {
+	e, err := jsm.jobs.Get(jobID)
+	if err != nil {
+		return err
+	}
+	if e.job.State() != Reserved {
+		return ErrInvalidJobTransition
+	}
+	if len(clientID) > 0 && e.job.ReservedBy() != clientID {
+		return ErrUnauthorizedOperation
+	}
+
+	_, err = jsm.reservedJobs.Remove(e.entry)
+	if err != nil {
+		return err
+	}
+
+	e.job.UpdatePriority(pri)
+	e.job.UpdateState(Delayed)
+	e.job.UpdateDelay(delay)
+	if _, err := e.job.UpdateReadyAt(nowSeconds); err != nil {
+		return err
+	}
+	e.job.UpdateReservedBy("")
+	if je, err := jsm.tubes.EnqueueDelayedJob(e.job); err != nil {
+		return err
+	} else {
+		e.entry = je
+		if e.job.ReadyAt() < jsm.nextDelayTickAt {
+			jsm.nextDelayTickAt = e.job.ReadyAt()
+		}
+
 		return nil
 	}
 }
@@ -576,13 +625,13 @@ func (jsm *localJSM) tickDelayJobs(now int64) {
 	for t, _ := range jsm.tubes {
 		for {
 			// Query the state machine for the next delayed job
-			job, err := jsm.NextDelayedJob(t)
+			job, err := jsm.PeekDelayedJob(t)
 			if err == ErrEntryMissing {
 				// No delayed jobs are present
 				break
 			} else if err != nil {
 				// Un-Expected error
-				logc.Panicf("jsm.NextDelayedJob(tubename=%v) err=%v", t, err)
+				logc.Panicf("jsm.PeekDelayedJob(tubename=%v) err=%v", t, err)
 			}
 
 			if job.ReadyAt() >= now {
@@ -643,12 +692,12 @@ func (jsm *localJSM) tryReserveJob(nowSecs int64, t TubeName, cli *ClientResvEnt
 	}
 
 	// Query the job-state-machine to check if any jobs are READY
-	job, err := jsm.NextReadyJob(t)
+	job, err := jsm.PeekReadyJob(t)
 	if err == ErrEntryMissing {
 		// no entry is found
 		return nil, ErrNoReservationFound
 	} else if err != nil {
-		logc.Panicf("jsm.NextReadyJob(%v) err=%v", t, err)
+		logc.Panicf("jsm.PeekReadyJob(%v) err=%v", t, err)
 	}
 
 	if cli == nil {

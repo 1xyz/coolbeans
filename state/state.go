@@ -49,6 +49,9 @@ type Job interface {
 	// Maximum delay is 2**32-1.
 	Delay() int64
 
+	// Update Delay to a new value. Return back the newly set value
+	UpdateDelay(newDelay int64) int64
+
 	// TTR/time to run -- is an integer number of seconds to allow a worker
 	// to run this job. This time is counted from the moment a worker reserves
 	// this job. If the worker does not delete, release, or bury the job within
@@ -72,6 +75,10 @@ type Job interface {
 
 	// ReadyAt - Indicates the time when the job is ready
 	ReadyAt() int64
+
+	// Reset the ReadyAt time taking the current time in reference
+	// Return back the new readyAt time
+	UpdateReadyAt(nowSeconds int64) (int64, error)
 
 	// Retrieve the current job state
 	State() JobState
@@ -139,6 +146,11 @@ func (j *localJob) Delay() int64 {
 	return j.delay
 }
 
+func (j *localJob) UpdateDelay(newDelay int64) int64 {
+	j.delay = newDelay
+	return j.delay
+}
+
 func (j *localJob) TTR() int {
 	return j.ttr
 }
@@ -161,6 +173,11 @@ func (j *localJob) CreatedAt() int64 {
 
 func (j *localJob) ReadyAt() int64 {
 	return j.readyAt
+}
+
+func (j *localJob) UpdateReadyAt(nowSeconds int64) (int64, error) {
+	j.readyAt = nowSeconds + j.delay
+	return j.readyAt, nil
 }
 
 func (j *localJob) State() JobState {
@@ -242,32 +259,29 @@ type JSM interface {
 	// Delete, removes a job specified by the id by a specific client
 	Delete(jobID JobID, clientID ClientID) error
 
-	// NextDelayedJob returns the job in the Delay state in order of
+	// PeekDelayedJob returns the job in the Delay state in order of
 	// priority for this tube. A job with and earlier (lower) delay
 	// takes higher precedence.
-	// NextDelayedJob(tubeName TubeName) (Job, error)
+	PeekDelayedJob(tubeName TubeName) (Job, error)
 
-	// NextReadyJob returns the job in the Ready state in order of
+	// PeekReadyJob returns the job in the Ready state in order of
 	// priority for this tube. A job with a lower priority value
 	// takes higher precedence.
-	// NextReadyJob(tubeName TubeName) (Job, error)
+	PeekReadyJob(tubeName TubeName) (Job, error)
 
-	// NextReservedJob returns the job in a Reserved state in order of
-	// priority for this client. A job with an earlier ExpiresAt takes
-	// higher precedence.
-	// NextReservedJob(clientID ClientID) (Job, error)
+	// PeekReadyJob returns the job in the Buried state in order of
+	// priority for this tube. A job which was buried first takes higher precedence.
+	PeekBuriedJob(tubeName TubeName) (Job, error)
 
-	// Ready transitions this Delayed/Buried job to  Ready
-	// Ready(jobID JobID) error
+	// GetJob returns the job by its id
+	GetJob(id JobID) (Job, error)
 
-	// Reserve transitions this Ready job to be Reserved by this client
-	// Reserve(nowSeconds int64, jobID JobID, clientID ClientID) error
-
-	// Release transitioned this reserved job to a Ready one
+	// Release transitions this reserved job to a Ready state
 	Release(jobID JobID, clientID ClientID) error
 
-	// // Release this job into the delayed state (from a reserved to delay state)
-	// ReleaseWithDelay(jobID uint64, CliID string, delaySeconds int) error
+	// ReleaseWith transitions this reserved job to a Ready or Delayed state
+	// with a modified priority and delay
+	ReleaseWith(nowSeconds int64, jobID JobID, clientID ClientID, pri uint32, delay int64) error
 
 	// Extend a reserved job's reservation TTL by its TTR (time-to-run)
 	Touch(nowSeconds int64, jobID JobID, clientID ClientID) error

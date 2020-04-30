@@ -273,6 +273,26 @@ func (c *Client) Touch(nowSeconds int64, jobID state.JobID, clientID state.Clien
 	return nil
 }
 
+func (c *Client) PeekDelayedJob(tubeName state.TubeName) (state.Job, error) {
+	return nil, nil
+}
+
+func (c *Client) PeekReadyJob(tubeName state.TubeName) (state.Job, error) {
+	return nil, nil
+}
+
+func (c *Client) PeekBuriedJob(tubeName state.TubeName) (state.Job, error) {
+	return nil, nil
+}
+
+func (c *Client) GetJob(id state.JobID) (state.Job, error) {
+	return nil, nil
+}
+
+func (c *Client) ReleaseWith(nowSeconds int64, jobID state.JobID, clientID state.ClientID, pri uint32, delay int64) error {
+	return nil
+}
+
 func (c *Client) Tick(nowSeconds int64) ([]*state.Reservation, error) {
 	result := make([]*state.Reservation, 0)
 	entries := c.rq.Drain()

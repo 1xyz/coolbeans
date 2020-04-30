@@ -261,6 +261,10 @@ func (j *wrapJob) UpdatePriority(newPriority uint32) uint32 {
 func (j *wrapJob) Delay() int64 {
 	return j.jp.Delay
 }
+func (j *wrapJob) UpdateDelay(newDelay int64) int64 {
+	j.jp.Delay = newDelay
+	return j.jp.Delay
+}
 func (j *wrapJob) TTR() int {
 	return int(j.jp.Ttr)
 }
@@ -279,6 +283,10 @@ func (j *wrapJob) CreatedAt() int64 {
 func (j *wrapJob) ReadyAt() int64 {
 	return j.jp.ReadyAt
 }
+func (j *wrapJob) UpdateReadyAt(nowSeconds int64) (int64, error) {
+	j.jp.ReadyAt = nowSeconds + j.jp.Delay
+	return j.jp.ReadyAt, nil
+}
 func (j *wrapJob) State() state.JobState {
 	return state.JobState(j.jp.State)
 }
@@ -294,21 +302,17 @@ func (j *wrapJob) ExpiresAt() int64 {
 func (j *wrapJob) ReservedBy() state.ClientID {
 	return state.ClientID(j.jp.ReservedBy)
 }
-
 func (j *wrapJob) UpdateReservation(nowSeconds int64) (int64, error) {
 	j.jp.ExpiresAt = nowSeconds + int64(j.jp.Ttr)
 	return j.jp.ExpiresAt, nil
 }
-
 func (j *wrapJob) ResetBuriedAt() {
 	j.jp.BuriedAt = 0
 }
-
 func (j *wrapJob) UpdateBuriedAt(nowSeconds int64) int64 {
 	j.jp.BuriedAt = nowSeconds
 	return j.jp.BuriedAt
 }
-
 func (j *wrapJob) BuriedAt() int64 {
 	return j.jp.BuriedAt
 }
