@@ -149,6 +149,12 @@ func (c *cmdProcessor) processRequest(req *CmdRequest) {
 		resp = c.kick(cli, req)
 	case Peek:
 		resp = c.peek(cli, req)
+	case PeekBuried:
+		resp = c.callPeekFunc(c.jsm.PeekBuriedJob, cli, req)
+	case PeekDelayed:
+		resp = c.callPeekFunc(c.jsm.PeekDelayedJob, cli, req)
+	case PeekReady:
+		resp = c.callPeekFunc(c.jsm.PeekReadyJob, cli, req)
 	case Put:
 		resp = c.put(cli, req)
 	case Release:
@@ -301,7 +307,6 @@ func (c *cmdProcessor) kickN(cli *client, req *CmdRequest) *CmdResponse {
 }
 
 func (c *cmdProcessor) peek(cli *client, req *CmdRequest) *CmdResponse {
-	resp := NewCmdResponseFromReq(req)
 	cmd, ok := req.cmd.(*idArg)
 	if !ok {
 		// Note: this is indicative of code-bug where the CmdType and cmd don't match up
@@ -309,7 +314,20 @@ func (c *cmdProcessor) peek(cli *client, req *CmdRequest) *CmdResponse {
 	}
 
 	j, err := c.jsm.GetJob(cmd.id)
+	return replyPeek(j, err, cli, req)
+}
+
+type peekTube func(name state.TubeName) (state.Job, error)
+
+func (c *cmdProcessor) callPeekFunc(pf peekTube, cli *client, req *CmdRequest) *CmdResponse {
+	j, err := pf(cli.useTube)
+	return replyPeek(j, err, cli, req)
+}
+
+func replyPeek(j state.Job, err error, cli *client, req *CmdRequest) *CmdResponse {
 	if err != nil {
+		log.Errorf("cmdProcessor.replyPeek: err=%v", err)
+		resp := NewCmdResponseFromReq(req)
 		resp.setResponse(MsgNotFound)
 		return resp
 	}
@@ -534,7 +552,7 @@ func NewCmdRequest(cmdData *CmdData, clientID state.ClientID) (CmdRequest, error
 		cmdRequest.cmd, err = NewReserveWithTimeoutArg(cmdData)
 	case Touch:
 		cmdRequest.cmd, err = NewIDArg(cmdData)
-	case Quit, Reserve:
+	case Quit, Reserve, PeekReady, PeekDelayed, PeekBuried:
 	default:
 		err = ErrCmdNotFound
 	}

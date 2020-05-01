@@ -3,6 +3,7 @@
 package integration_test
 
 import (
+	"fmt"
 	"github.com/beanstalkd/go-beanstalk"
 	. "github.com/smartystreets/goconvey/convey"
 	"math/rand"
@@ -22,6 +23,7 @@ const (
 	msgErrTouchNotFound   = "touch: not found"
 	msgErrReleaseNotFound = "release: not found"
 	msgErrPeekNotFound    = "peek: not found"
+	msgErrNotFound        = "not found"
 )
 
 func TestProtocol_Put(t *testing.T) {
@@ -399,6 +401,163 @@ func TestProtocol_Peek(t *testing.T) {
 		_, err := c.Peek(1234)
 		So(err.Error(), ShouldEqual, msgErrPeekNotFound)
 	})
+}
+
+type jobReq struct {
+	id   uint64
+	body []byte
+}
+
+func TestProtocol_PeekReady(t *testing.T) {
+	Convey("when a producer put jobs with different priorities to a specific tube", t, func() {
+		pt := newRandTube(t)
+		defer closeTube(t, pt)
+
+		n := 3
+		jobsIn := make([]jobReq, n)
+		for i := 0; i < n; i++ {
+			jobsIn[i].body = []byte(fmt.Sprintf("hello_%d", i))
+			jobsIn[i].id, _ = pt.Put(jobsIn[i].body, uint32(n-i), 0, putTTR)
+		}
+
+		Convey("Peeking the ready tube returns the highest pri job", func() {
+			ct := newTube(t, pt.Name)
+			defer closeTube(t, ct)
+
+			idOut, bodyOut, err := ct.PeekReady()
+			So(err, ShouldBeNil)
+			So(idOut, ShouldEqual, jobsIn[2].id)
+			So(bodyOut, ShouldResemble, jobsIn[2].body)
+		})
+	})
+
+	Convey("Peeking an empty ready tube returns not-found", t, func() {
+		ct := newRandTube(t)
+		defer closeTube(t, ct)
+
+		_, _, err := ct.PeekReady()
+		So(err.Error(), ShouldContainSubstring, msgErrNotFound)
+	})
+}
+
+func TestProtocol_PeekDelayed(t *testing.T) {
+	Convey("when a producer put jobs with different delays to a specific tube", t, func() {
+		pt := newRandTube(t)
+		defer closeTube(t, pt)
+
+		n := 3
+		jobsIn := make([]jobReq, n)
+		for i := 0; i < n; i++ {
+			delay := time.Duration(10+n-i) * time.Second
+			jobsIn[i].body = []byte(fmt.Sprintf("hello_%d", i))
+			jobsIn[i].id, _ = pt.Put(jobsIn[i].body, 0, delay, putTTR)
+		}
+
+		Convey("Peeking the delayed tube returns the lowest delay job", func() {
+			ct := newTube(t, pt.Name)
+			defer closeTube(t, ct)
+
+			idOut, bodyOut, err := ct.PeekDelayed()
+			So(err, ShouldBeNil)
+			So(idOut, ShouldEqual, jobsIn[2].id)
+			So(bodyOut, ShouldResemble, jobsIn[2].body)
+		})
+	})
+
+	Convey("Peeking an empty delayed tube returns not-found", t, func() {
+		ct := newRandTube(t)
+		defer closeTube(t, ct)
+
+		_, _, err := ct.PeekDelayed()
+		So(err, ShouldNotBeNil)
+		So(err.Error(), ShouldContainSubstring, msgErrNotFound)
+	})
+}
+
+func newBuriedJob(t *testing.T, tube *beanstalk.Tube, body []byte, pri uint32, delay time.Duration) uint64 {
+	jobId, err := tube.Put(body, pri, delay, putTTR)
+	if err != nil {
+		t.Fatalf("newBuriedJob: tube.Put err = %v", err)
+	}
+
+	tubes := newTubeSet(t, tube.Name)
+	defer closeTubeSet(t, tubes)
+	id, _, err := tubes.Reserve(reserveTimeout)
+	if err != nil {
+		t.Fatalf("newBuriedJob: tubes.Reserve err = %v", err)
+	}
+	if id != jobId {
+		t.Fatalf("newBuriedJob: tubes.Reserve found another job in the queue id = %v expected id = %v",
+			jobId, id)
+	}
+
+	if err := tubes.Conn.Bury(id, 254); err != nil {
+		t.Fatalf("newBuriedJob: conn.Bury err = %v", err)
+	}
+
+	return jobId
+}
+
+func TestProtocol_PeekBuried(t *testing.T) {
+	Convey("when a producer buries jobs to a specific tube", t, func() {
+		pt := newRandTube(t)
+		defer closeTube(t, pt)
+
+		n := 3
+		jobsIn := make([]jobReq, n)
+		for i := 0; i < n; i++ {
+			jobsIn[i].body = []byte(fmt.Sprintf("hello_%d", i))
+			jobsIn[i].id = newBuriedJob(t, pt, jobsIn[i].body, 0, 0)
+		}
+
+		Convey("Peeking the buried tube returns the earliest buried job", func() {
+			ct := newTube(t, pt.Name)
+			defer closeTube(t, ct)
+
+			idOut, bodyOut, err := ct.PeekBuried()
+			So(err, ShouldBeNil)
+			So(idOut, ShouldEqual, jobsIn[0].id)
+			So(bodyOut, ShouldResemble, jobsIn[0].body)
+		})
+	})
+
+	Convey("PeekBuried an empty tube returns not-found", t, func() {
+		ct := newRandTube(t)
+		defer closeTube(t, ct)
+
+		_, _, err := ct.PeekBuried()
+		So(err, ShouldNotBeNil)
+		So(err.Error(), ShouldContainSubstring, msgErrNotFound)
+	})
+}
+
+func newTubeSet(t *testing.T, tubeName ...string) *beanstalk.TubeSet {
+	return beanstalk.NewTubeSet(newConn(t), tubeName...)
+}
+
+func newTube(t *testing.T, tubeName string) *beanstalk.Tube {
+	return &beanstalk.Tube{Conn: newConn(t), Name: tubeName}
+}
+
+func newRandTube(t *testing.T) *beanstalk.Tube {
+	tubeName := randStr(6)
+	return newTube(t, tubeName)
+}
+
+func closeTubeSet(t *testing.T, tubeSet *beanstalk.TubeSet) {
+	closeConn(t, tubeSet.Conn)
+}
+
+func closeTube(t *testing.T, tube *beanstalk.Tube) {
+	closeConn(t, tube.Conn)
+}
+
+func closeConn(t *testing.T, c *beanstalk.Conn) {
+	if c != nil {
+		if err := c.Close(); err != nil {
+			t.Logf("closeTube: c.close() err=%v", err)
+		}
+	}
 }
 
 func newConn(t *testing.T) *beanstalk.Conn {
