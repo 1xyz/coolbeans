@@ -42,6 +42,18 @@ service JobStateMachine {
 
     // Kick at-most n jobs in this tube,
     rpc KickN (KickNRequest) returns (KickNResponse) {}
+
+    // Peek a specific job (by the JobID)
+    rpc GetJob (GetJobRequest) returns (GetJobResponse) {}
+
+    // Peek a tube's buried jobs
+    rpc PeekBuried (PeekRequest) returns (PeekResponse){}
+
+    // Peek a tube's delayed jobs
+    rpc PeekDelayed (PeekRequest) returns (PeekResponse) {}
+
+    // Peek a tube's ready jobs
+    rpc PeekReady (PeekRequest) returns (PeekResponse) {}
 }
 
 message PutRequest {
@@ -175,7 +187,10 @@ message ReleaseRequest {
     string proxy_id = 3;
 
     // A delay if set to a value > 0 marks the job as delayed
-    int32 delay = 4;
+    int64 delay = 4;
+
+    // the new priority with which this job is released
+    uint32 priority = 5;
 }
 
 message CheckClientStateRequest {
@@ -205,6 +220,13 @@ message CheckClientStateResponse {
 message TouchRequest {
     // The job identifier of the job to be touched
     int64 job_id = 1;
+
+    // The identifier of the client asking for the release
+    string client_id = 2;
+
+    // proxy_id is the id of the proxy server that
+    // forwarded this  request
+    string proxy_id = 3;
 }
 
 message BuryRequest {
@@ -240,6 +262,37 @@ message KickNResponse {
 }
 
 
+message JobResponse {
+    // the identifier of the job
+    int64 job_id = 1;
+
+    // job body size
+    int32 body_size = 2;
+
+    // job body
+    bytes body = 3;
+}
+
+message GetJobRequest {
+    // Id of the job to get
+    int64 job_id = 1;
+}
+
+message GetJobResponse {
+    // An optional job if set.
+    JobResponse job = 1;
+}
+
+message PeekRequest {
+    // the name of the tube
+    string tube_name = 1;
+}
+
+message PeekResponse {
+    // An optional job if set.
+    JobResponse job = 1;
+}
+
 ////////////////////////////////////////////////////////////////////////
 
 // Encapsulates a snap of the entire system
@@ -252,7 +305,6 @@ message SnapshotProto {
 }
 
 ////////////////////////////////////////////////////////////////////////
-
 
 message ApplyOpRequest {
     // Indicates the type of operation
@@ -287,6 +339,11 @@ enum OpType {
     BURY = 7;
     KICK = 8;
     KICKN = 9;
+    TOUCH = 10;
+    PEEK = 11;
+    PEEK_READY = 12;
+    PEEK_BURIED = 13;
+    PEEK_DELAYED = 14;
 }
 
 // C & P from GRPC error codes
@@ -409,22 +466,3 @@ enum ResultCode {
     // authentication credentials for the operation.
     Unauthenticated = 16;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

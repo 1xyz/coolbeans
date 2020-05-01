@@ -270,7 +270,20 @@ func (c *Client) KickN(name state.TubeName, n int) (int, error) {
 }
 
 func (c *Client) Touch(nowSeconds int64, jobID state.JobID, clientID state.ClientID) error {
-	return nil
+	ctx, cancel := context.WithTimeout(context.Background(), c.ConnTimeout)
+	defer cancel()
+
+	_, err := c.jsmClient.Touch(ctx, &v1.TouchRequest{
+		JobId:    int64(jobID),
+		ClientId: string(clientID),
+		ProxyId:  c.ProxyID,
+	})
+
+	if err != nil {
+		log.Errorf("proxy.client: c.jsmClient.Touch err=%v", err)
+	}
+
+	return err
 }
 
 func (c *Client) PeekDelayedJob(tubeName state.TubeName) (state.Job, error) {
@@ -290,6 +303,20 @@ func (c *Client) GetJob(id state.JobID) (state.Job, error) {
 }
 
 func (c *Client) ReleaseWith(nowSeconds int64, jobID state.JobID, clientID state.ClientID, pri uint32, delay int64) error {
+	ctx, cancel := context.WithTimeout(context.Background(), c.ConnTimeout)
+	defer cancel()
+
+	req := v1.ReleaseRequest{
+		JobId:    int64(jobID),
+		ClientId: string(clientID),
+		ProxyId:  c.ProxyID,
+		Delay:    delay,
+		Priority: pri,
+	}
+	if _, err := c.jsmClient.Release(ctx, &req); err != nil {
+		log.Errorf("proxy.client: c.jsmClient.Touch err=%v", err)
+		return err
+	}
 	return nil
 }
 

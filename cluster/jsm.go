@@ -40,30 +40,11 @@ func (j *JSMServer) RunController() {
 	}
 }
 
-func (j *JSMServer) Put(ctx context.Context, req *v1.PutRequest) (*v1.PutResponse, error) {
-	var resp v1.PutResponse
-	if err := j.performApply(v1.OpType_PUT, req, &resp); err != nil {
-		log.WithField("method", "Put").Errorf("performApply. Err=%v", err)
-		return nil, err
-	}
-
-	return &resp, nil
-}
-
-func (j *JSMServer) Delete(ctx context.Context, req *v1.DeleteRequest) (*v1.Empty, error) {
-	var resp v1.Empty
-	if err := j.performApply(v1.OpType_DELETE, req, &resp); err != nil {
-		log.WithField("method", "Delete").Errorf("performApply. Err=%v", err)
-		return nil, err
-	}
-
-	return &resp, nil
-}
-
-func (j *JSMServer) Release(ctx context.Context, req *v1.ReleaseRequest) (*v1.Empty, error) {
-	var resp v1.Empty
-	if err := j.performApply(v1.OpType_RELEASE, req, &resp); err != nil {
-		log.WithField("method", "Release").Errorf("performApply. Err=%v", err)
+func (j *JSMServer) CheckClientState(ctx context.Context, req *v1.CheckClientStateRequest) (*v1.CheckClientStateResponse, error) {
+	var resp v1.CheckClientStateResponse
+	log.Infof("CheckClientState: proxyID=%v", req.ProxyId)
+	if err := j.performApply(v1.OpType_CHECK_CLIENT_STATE, req, &resp); err != nil {
+		log.Errorf("CheckClientState: performApply. Err=%v", err)
 		return nil, err
 	}
 
@@ -74,6 +55,16 @@ func (j *JSMServer) Bury(ctx context.Context, req *v1.BuryRequest) (*v1.Empty, e
 	var resp v1.Empty
 	if err := j.performApply(v1.OpType_BURY, req, &resp); err != nil {
 		log.Errorf("jsmServer.Bury: performApply. Err=%v", err)
+		return nil, err
+	}
+
+	return &resp, nil
+}
+
+func (j *JSMServer) Delete(ctx context.Context, req *v1.DeleteRequest) (*v1.Empty, error) {
+	var resp v1.Empty
+	if err := j.performApply(v1.OpType_DELETE, req, &resp); err != nil {
+		log.WithField("method", "Delete").Errorf("performApply. Err=%v", err)
 		return nil, err
 	}
 
@@ -100,6 +91,16 @@ func (j *JSMServer) KickN(ctx context.Context, req *v1.KickNRequest) (*v1.KickNR
 	return &resp, nil
 }
 
+func (j *JSMServer) Put(ctx context.Context, req *v1.PutRequest) (*v1.PutResponse, error) {
+	var resp v1.PutResponse
+	if err := j.performApply(v1.OpType_PUT, req, &resp); err != nil {
+		log.WithField("method", "Put").Errorf("performApply. Err=%v", err)
+		return nil, err
+	}
+
+	return &resp, nil
+}
+
 func (j *JSMServer) Reserve(ctx context.Context, req *v1.ReserveRequest) (*v1.ReserveResponse, error) {
 	var resp v1.ReserveResponse
 	log.Infof("Reserve: proxyID=%v clientID=%v timeout=%v watchedTubes=%v",
@@ -111,6 +112,40 @@ func (j *JSMServer) Reserve(ctx context.Context, req *v1.ReserveRequest) (*v1.Re
 
 	log.Infof("Reserve: proxyID=%v clientID=%v timeout=%v watchedTubes=%v status=%v",
 		req.ProxyId, req.ClientId, req.TimeoutSecs, req.WatchedTubes, resp.Reservation.Status)
+	return &resp, nil
+}
+
+func (j *JSMServer) Release(ctx context.Context, req *v1.ReleaseRequest) (*v1.Empty, error) {
+	var resp v1.Empty
+	if err := j.performApply(v1.OpType_RELEASE, req, &resp); err != nil {
+		log.WithField("method", "Release").Errorf("performApply. Err=%v", err)
+		return nil, err
+	}
+
+	return &resp, nil
+}
+
+func (j *JSMServer) Tick() (*v1.TickResponse, error) {
+	if !j.r.IsLeader() {
+		return nil, ErrNotLeader
+	}
+
+	var resp v1.TickResponse
+	if err := j.performApply(v1.OpType_TICK, &v1.Empty{}, &resp); err != nil {
+		log.WithField("method", "Reserve").Errorf("performApply. Err=%v", err)
+		return nil, err
+	}
+
+	return &resp, nil
+}
+
+func (j *JSMServer) Touch(ctx context.Context, req *v1.TouchRequest) (*v1.Empty, error) {
+	var resp v1.Empty
+	err := j.performApply(v1.OpType_TOUCH, req, &resp)
+	if err != nil {
+		return nil, err
+	}
+
 	return &resp, nil
 }
 
@@ -158,31 +193,6 @@ func (j *JSMServer) StreamReserveUpdates(req *v1.ReserveUpdateRequest,
 	}
 
 	return nil
-}
-
-func (j *JSMServer) Tick() (*v1.TickResponse, error) {
-	if !j.r.IsLeader() {
-		return nil, ErrNotLeader
-	}
-
-	var resp v1.TickResponse
-	if err := j.performApply(v1.OpType_TICK, &v1.Empty{}, &resp); err != nil {
-		log.WithField("method", "Reserve").Errorf("performApply. Err=%v", err)
-		return nil, err
-	}
-
-	return &resp, nil
-}
-
-func (j *JSMServer) CheckClientState(ctx context.Context, req *v1.CheckClientStateRequest) (*v1.CheckClientStateResponse, error) {
-	var resp v1.CheckClientStateResponse
-	log.Infof("CheckClientState: proxyID=%v", req.ProxyId)
-	if err := j.performApply(v1.OpType_CHECK_CLIENT_STATE, req, &resp); err != nil {
-		log.Errorf("CheckClientState: performApply. Err=%v", err)
-		return nil, err
-	}
-
-	return &resp, nil
 }
 
 func (j *JSMServer) performApply(opType v1.OpType, req pb.Message, resp pb.Message) error {

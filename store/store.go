@@ -410,7 +410,7 @@ func (f *fsm) Apply(l *raft.Log) interface{} {
 	case v1.OpType_RELEASE:
 		var rReq v1.ReleaseRequest
 		unmarshalP(applyReq.Body, &rReq)
-		rResp, err := f.ApplyRelease(&rReq)
+		rResp, err := f.ApplyRelease(applyReq.NowSecs, &rReq)
 		return newApplyRespBytes(rResp, err)
 
 	case v1.OpType_RESERVE:
@@ -422,6 +422,12 @@ func (f *fsm) Apply(l *raft.Log) interface{} {
 	case v1.OpType_TICK:
 		tResp, err := f.ApplyTick(applyReq.NowSecs)
 		return newApplyRespBytes(tResp, err)
+
+	case v1.OpType_TOUCH:
+		var tReq v1.TouchRequest
+		unmarshalP(applyReq.Body, &tReq)
+		rResp, err := f.ApplyTouch(applyReq.NowSecs, &tReq)
+		return newApplyRespBytes(rResp, err)
 
 	case v1.OpType_CHECK_CLIENT_STATE:
 		var chkReq v1.CheckClientStateRequest
@@ -491,15 +497,12 @@ func (f *fsm) ApplyPut(nowSecs int64, pReq *v1.PutRequest) (*v1.PutResponse, err
 }
 
 func (f *fsm) ApplyDelete(req *v1.DeleteRequest) (*v1.Empty, error) {
-	cu := NewClientURI(req.ProxyId, req.ClientId)
-	if err := cu.Validate(); err != nil {
-		log.WithField("method", "ApplyDelete").
-			Errorf("clientUri.validate %v", err)
+	cu, err := newClientUri(req)
+	if err != nil {
 		return nil, err
 	}
 
-	err := f.jsm.Delete(state.JobID(req.JobId), cu.ToClientID())
-	if err != nil {
+	if err := f.jsm.Delete(state.JobID(req.JobId), cu.ToClientID()); err != nil {
 		return nil, err
 	}
 
@@ -507,14 +510,13 @@ func (f *fsm) ApplyDelete(req *v1.DeleteRequest) (*v1.Empty, error) {
 }
 
 func (f *fsm) ApplyBury(nowSecs int64, req *v1.BuryRequest) (*v1.Empty, error) {
-	cu := NewClientURI(req.ProxyId, req.ClientId)
-	if err := cu.Validate(); err != nil {
-		log.Errorf("ApplyBury: clientUri.validate %v", err)
+	cu, err := newClientUri(req)
+	if err != nil {
 		return nil, err
 	}
 
-	err := f.jsm.Bury(nowSecs, state.JobID(req.JobId), req.Priority, cu.ToClientID())
-	if err != nil {
+	if err := f.jsm.Bury(nowSecs, state.JobID(req.JobId), req.Priority,
+		cu.ToClientID()); err != nil {
 		return nil, err
 	}
 
@@ -541,16 +543,15 @@ func (f *fsm) ApplyKickN(req *v1.KickNRequest) (*v1.KickNResponse, error) {
 	}, nil
 }
 
-func (f *fsm) ApplyRelease(req *v1.ReleaseRequest) (*v1.Empty, error) {
+func (f *fsm) ApplyRelease(nowSecs int64, req *v1.ReleaseRequest) (*v1.Empty, error) {
 	cu := NewClientURI(req.ProxyId, req.ClientId)
-	if err := cu.Validate(); err != nil {
-		log.WithField("method", "ApplyDelete").
-			Errorf("clientUri.validate %v", err)
+	cu, err := newClientUri(req)
+	if err != nil {
 		return nil, err
 	}
 
-	err := f.jsm.Release(state.JobID(req.JobId), cu.ToClientID())
-	if err != nil {
+	if err := f.jsm.ReleaseWith(nowSecs, state.JobID(req.JobId), cu.ToClientID(),
+		req.Priority, req.Delay); err != nil {
 		return nil, err
 	}
 
@@ -563,10 +564,8 @@ func (f *fsm) ApplyReserve(nowSecs int64, req *v1.ReserveRequest) (*v1.ReserveRe
 		watchedTubes = append(watchedTubes, state.TubeName(t))
 	}
 
-	cu := NewClientURI(req.ProxyId, req.ClientId)
-	if err := cu.Validate(); err != nil {
-		log.WithField("method", "ApplyReserve").
-			Errorf("clientUri.validate %v", err)
+	cu, err := newClientUri(req)
+	if err != nil {
 		return nil, err
 	}
 
@@ -629,6 +628,34 @@ func (f *fsm) ApplyTick(nowSecs int64) (*v1.TickResponse, error) {
 	return &v1.TickResponse{
 		ProxyReservations: proxyReservations,
 	}, nil
+}
+
+func (f *fsm) ApplyTouch(nowSecs int64, req *v1.TouchRequest) (*v1.Empty, error) {
+	cu, err := newClientUri(req)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := f.jsm.Touch(nowSecs, state.JobID(req.JobId), cu.ToClientID()); err != nil {
+		return nil, err
+	}
+
+	return &v1.Empty{}, nil
+}
+
+type clientProxyUri interface {
+	GetClientId() string
+	GetProxyId() string
+}
+
+func newClientUri(uri clientProxyUri) (*ClientURI, error) {
+	cu := NewClientURI(uri.GetProxyId(), uri.GetClientId())
+	if err := cu.Validate(); err != nil {
+		log.Errorf("store.newClientUri: cu.Validate err = %v", err)
+		return nil, err
+	}
+
+	return cu, nil
 }
 
 func toV1Reservation(r *state.Reservation) (*v1.Reservation, error) {
