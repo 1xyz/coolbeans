@@ -118,7 +118,11 @@ func (s *snapshot) appendClientRsvEntry(cli *state.ClientResvEntry) {
 }
 
 func (s *snapshot) appendJob(j state.Job) {
-	jobProto := &v1.JobProto{
+	s.snap.Jobs = append(s.snap.Jobs, JobToJobProto(j))
+}
+
+func JobToJobProto(j state.Job) *v1.JobProto {
+	return &v1.JobProto{
 		Id:         int64(j.ID()),
 		Priority:   j.Priority(),
 		Delay:      j.Delay(),
@@ -131,9 +135,8 @@ func (s *snapshot) appendJob(j state.Job) {
 		ReservedBy: string(j.ReservedBy()),
 		BodySize:   int32(j.BodySize()),
 		Body:       j.Body(),
+		BuriedAt:   j.BuriedAt(),
 	}
-
-	s.snap.Jobs = append(s.snap.Jobs, jobProto)
 }
 
 func (s *snapshot) ReadFromFile(filename string) error {
@@ -232,7 +235,7 @@ func (s *snapshot) restoreJobs(jsmSnap state.JSMSnapshot, timeout time.Duration)
 	}(jobCh, errCh)
 
 	for _, job := range s.snap.Jobs {
-		jobCh <- newJob(job)
+		jobCh <- NewJobFromJobProto(job)
 	}
 
 	close(jobCh)
@@ -244,7 +247,7 @@ type wrapJob struct {
 	jp *v1.JobProto
 }
 
-func newJob(jp *v1.JobProto) state.Job {
+func NewJobFromJobProto(jp *v1.JobProto) state.Job {
 	return &wrapJob{jp: jp}
 }
 

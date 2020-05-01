@@ -4,6 +4,7 @@ import (
 	"fmt"
 	v1 "github.com/1xyz/coolbeans/api/v1"
 	"github.com/1xyz/coolbeans/state"
+	"github.com/1xyz/coolbeans/store"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -286,26 +287,38 @@ func (c *Client) Touch(nowSeconds int64, jobID state.JobID, clientID state.Clien
 	return err
 }
 
+func (c *Client) peek(pf func(context.Context, *v1.PeekRequest, ...grpc.CallOption) (*v1.PeekResponse, error), name state.TubeName) (state.Job, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), c.ConnTimeout)
+	defer cancel()
+	resp, err := pf(ctx, &v1.PeekRequest{TubeName: string(name)})
+	if err != nil {
+		return nil, err
+	}
+	return store.NewJobFromJobProto(resp.Job), nil
+}
 func (c *Client) PeekDelayedJob(tubeName state.TubeName) (state.Job, error) {
-	return nil, nil
+	return c.peek(c.jsmClient.PeekDelayed, tubeName)
 }
-
 func (c *Client) PeekReadyJob(tubeName state.TubeName) (state.Job, error) {
-	return nil, nil
+	return c.peek(c.jsmClient.PeekReady, tubeName)
 }
-
 func (c *Client) PeekBuriedJob(tubeName state.TubeName) (state.Job, error) {
-	return nil, nil
+	return c.peek(c.jsmClient.PeekBuried, tubeName)
 }
 
 func (c *Client) GetJob(id state.JobID) (state.Job, error) {
-	return nil, nil
+	ctx, cancel := context.WithTimeout(context.Background(), c.ConnTimeout)
+	defer cancel()
+	resp, err := c.jsmClient.GetJob(ctx, &v1.GetJobRequest{JobId: int64(id)})
+	if err != nil {
+		return nil, err
+	}
+	return store.NewJobFromJobProto(resp.Job), nil
 }
 
 func (c *Client) ReleaseWith(nowSeconds int64, jobID state.JobID, clientID state.ClientID, pri uint32, delay int64) error {
 	ctx, cancel := context.WithTimeout(context.Background(), c.ConnTimeout)
 	defer cancel()
-
 	req := v1.ReleaseRequest{
 		JobId:    int64(jobID),
 		ClientId: string(clientID),

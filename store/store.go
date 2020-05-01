@@ -401,11 +401,35 @@ func (f *fsm) Apply(l *raft.Log) interface{} {
 		kResp, err := f.ApplyKickN(&knReq)
 		return newApplyRespBytes(kResp, err)
 
+	case v1.OpType_PEEK_BURIED:
+		var pReq v1.PeekRequest
+		unmarshalP(applyReq.Body, &pReq)
+		pResp, err := f.ApplyPeekBuried(&pReq)
+		return newApplyRespBytes(pResp, err)
+
+	case v1.OpType_PEEK_READY:
+		var pReq v1.PeekRequest
+		unmarshalP(applyReq.Body, &pReq)
+		pResp, err := f.ApplyPeekReady(&pReq)
+		return newApplyRespBytes(pResp, err)
+
+	case v1.OpType_PEEK_DELAYED:
+		var pReq v1.PeekRequest
+		unmarshalP(applyReq.Body, &pReq)
+		pResp, err := f.ApplyPeekDelayed(&pReq)
+		return newApplyRespBytes(pResp, err)
+
 	case v1.OpType_PUT:
 		var pReq v1.PutRequest
 		unmarshalP(applyReq.Body, &pReq)
 		pResp, err := f.ApplyPut(applyReq.NowSecs, &pReq)
 		return newApplyRespBytes(pResp, err)
+
+	case v1.OpType_GET_JOB:
+		var gReq v1.GetJobRequest
+		unmarshalP(applyReq.Body, &gReq)
+		gResp, err := f.ApplyGetJob(&gReq)
+		return newApplyRespBytes(gResp, err)
 
 	case v1.OpType_RELEASE:
 		var rReq v1.ReleaseRequest
@@ -484,16 +508,18 @@ func marshalP(m pb.Message) []byte {
 
 // //////////////////////////////////////////////////////////////////////
 
-func (f *fsm) ApplyPut(nowSecs int64, pReq *v1.PutRequest) (*v1.PutResponse, error) {
-	jobID, err := f.jsm.Put(nowSecs, pReq.Priority, pReq.Delay, int(pReq.Ttr),
-		int(pReq.BodySize), pReq.Body, state.TubeName(pReq.TubeName))
+func (f *fsm) ApplyBury(nowSecs int64, req *v1.BuryRequest) (*v1.Empty, error) {
+	cu, err := newClientUri(req)
 	if err != nil {
 		return nil, err
 	}
 
-	return &v1.PutResponse{
-		JobId: int64(jobID),
-	}, nil
+	if err := f.jsm.Bury(nowSecs, state.JobID(req.JobId), req.Priority,
+		cu.ToClientID()); err != nil {
+		return nil, err
+	}
+
+	return &v1.Empty{}, nil
 }
 
 func (f *fsm) ApplyDelete(req *v1.DeleteRequest) (*v1.Empty, error) {
@@ -509,18 +535,48 @@ func (f *fsm) ApplyDelete(req *v1.DeleteRequest) (*v1.Empty, error) {
 	return &v1.Empty{}, nil
 }
 
-func (f *fsm) ApplyBury(nowSecs int64, req *v1.BuryRequest) (*v1.Empty, error) {
-	cu, err := newClientUri(req)
+func (f *fsm) ApplyGetJob(gReq *v1.GetJobRequest) (*v1.GetJobResponse, error) {
+	j, err := f.jsm.GetJob(state.JobID(gReq.JobId))
+	if err != nil {
+		return nil, err
+	}
+	return &v1.GetJobResponse{
+		Job: JobToJobProto(j),
+	}, nil
+}
+
+func (f *fsm) ApplyPut(nowSecs int64, pReq *v1.PutRequest) (*v1.PutResponse, error) {
+	jobID, err := f.jsm.Put(nowSecs, pReq.Priority, pReq.Delay, int(pReq.Ttr),
+		int(pReq.BodySize), pReq.Body, state.TubeName(pReq.TubeName))
 	if err != nil {
 		return nil, err
 	}
 
-	if err := f.jsm.Bury(nowSecs, state.JobID(req.JobId), req.Priority,
-		cu.ToClientID()); err != nil {
+	return &v1.PutResponse{
+		JobId: int64(jobID),
+	}, nil
+}
+
+func (f *fsm) ApplyPeek(pfunc func(state.TubeName) (state.Job, error), pReq *v1.PeekRequest) (*v1.PeekResponse, error) {
+	j, err := pfunc(state.TubeName(pReq.TubeName))
+	if err != nil {
 		return nil, err
 	}
+	return &v1.PeekResponse{
+		Job: JobToJobProto(j),
+	}, nil
+}
 
-	return &v1.Empty{}, nil
+func (f *fsm) ApplyPeekBuried(pReq *v1.PeekRequest) (*v1.PeekResponse, error) {
+	return f.ApplyPeek(f.jsm.PeekBuriedJob, pReq)
+}
+
+func (f *fsm) ApplyPeekDelayed(pReq *v1.PeekRequest) (*v1.PeekResponse, error) {
+	return f.ApplyPeek(f.jsm.PeekDelayedJob, pReq)
+}
+
+func (f *fsm) ApplyPeekReady(pReq *v1.PeekRequest) (*v1.PeekResponse, error) {
+	return f.ApplyPeek(f.jsm.PeekReadyJob, pReq)
 }
 
 func (f *fsm) ApplyKick(req *v1.KickRequest) (*v1.Empty, error) {

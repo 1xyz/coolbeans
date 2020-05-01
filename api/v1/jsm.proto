@@ -261,18 +261,6 @@ message KickNResponse {
     int32 jobs_kicked = 1;
 }
 
-
-message JobResponse {
-    // the identifier of the job
-    int64 job_id = 1;
-
-    // job body size
-    int32 body_size = 2;
-
-    // job body
-    bytes body = 3;
-}
-
 message GetJobRequest {
     // Id of the job to get
     int64 job_id = 1;
@@ -280,7 +268,7 @@ message GetJobRequest {
 
 message GetJobResponse {
     // An optional job if set.
-    JobResponse job = 1;
+    JobProto job = 1;
 }
 
 message PeekRequest {
@@ -290,7 +278,7 @@ message PeekRequest {
 
 message PeekResponse {
     // An optional job if set.
-    JobResponse job = 1;
+    JobProto job = 1;
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -340,7 +328,7 @@ enum OpType {
     KICK = 8;
     KICKN = 9;
     TOUCH = 10;
-    PEEK = 11;
+    GET_JOB = 11;
     PEEK_READY = 12;
     PEEK_BURIED = 13;
     PEEK_DELAYED = 14;

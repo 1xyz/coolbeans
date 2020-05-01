@@ -40,21 +40,21 @@ func (j *JSMServer) RunController() {
 	}
 }
 
-func (j *JSMServer) CheckClientState(ctx context.Context, req *v1.CheckClientStateRequest) (*v1.CheckClientStateResponse, error) {
-	var resp v1.CheckClientStateResponse
-	log.Infof("CheckClientState: proxyID=%v", req.ProxyId)
-	if err := j.performApply(v1.OpType_CHECK_CLIENT_STATE, req, &resp); err != nil {
-		log.Errorf("CheckClientState: performApply. Err=%v", err)
+func (j *JSMServer) Bury(ctx context.Context, req *v1.BuryRequest) (*v1.Empty, error) {
+	var resp v1.Empty
+	if err := j.performApply(v1.OpType_BURY, req, &resp); err != nil {
+		log.Errorf("jsmServer.Bury: performApply. Err=%v", err)
 		return nil, err
 	}
 
 	return &resp, nil
 }
 
-func (j *JSMServer) Bury(ctx context.Context, req *v1.BuryRequest) (*v1.Empty, error) {
-	var resp v1.Empty
-	if err := j.performApply(v1.OpType_BURY, req, &resp); err != nil {
-		log.Errorf("jsmServer.Bury: performApply. Err=%v", err)
+func (j *JSMServer) CheckClientState(ctx context.Context, req *v1.CheckClientStateRequest) (*v1.CheckClientStateResponse, error) {
+	var resp v1.CheckClientStateResponse
+	log.Infof("CheckClientState: proxyID=%v", req.ProxyId)
+	if err := j.performApply(v1.OpType_CHECK_CLIENT_STATE, req, &resp); err != nil {
+		log.Errorf("CheckClientState: performApply. Err=%v", err)
 		return nil, err
 	}
 
@@ -69,6 +69,37 @@ func (j *JSMServer) Delete(ctx context.Context, req *v1.DeleteRequest) (*v1.Empt
 	}
 
 	return &resp, nil
+}
+
+func (j *JSMServer) GetJob(ctx context.Context, req *v1.GetJobRequest) (*v1.GetJobResponse, error) {
+	var resp v1.GetJobResponse
+	if err := j.performApply(v1.OpType_GET_JOB, req, &resp); err != nil {
+		log.Errorf("jsmServer.GetJob: performApply. Err=%v", err)
+		return nil, err
+	}
+
+	return &resp, nil
+}
+
+func (j *JSMServer) peek(req *v1.PeekRequest, opType v1.OpType) (*v1.PeekResponse, error) {
+	var resp v1.PeekResponse
+	if err := j.performApply(opType, req, &resp); err != nil {
+		log.Errorf("jsmServer.Peek: opTyoe=%v performApply. Err=%v", opType, err)
+		return nil, err
+	}
+	return &resp, nil
+}
+
+func (j *JSMServer) PeekBuried(ctx context.Context, req *v1.PeekRequest) (*v1.PeekResponse, error) {
+	return j.peek(req, v1.OpType_PEEK_BURIED)
+}
+
+func (j *JSMServer) PeekDelayed(ctx context.Context, req *v1.PeekRequest) (*v1.PeekResponse, error) {
+	return j.peek(req, v1.OpType_PEEK_DELAYED)
+}
+
+func (j *JSMServer) PeekReady(ctx context.Context, req *v1.PeekRequest) (*v1.PeekResponse, error) {
+	return j.peek(req, v1.OpType_PEEK_READY)
 }
 
 func (j *JSMServer) Kick(ctx context.Context, req *v1.KickRequest) (*v1.Empty, error) {
