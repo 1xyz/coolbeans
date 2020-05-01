@@ -21,6 +21,7 @@ const (
 	msgErrKickNotFound    = "kick-job: not found"
 	msgErrTouchNotFound   = "touch: not found"
 	msgErrReleaseNotFound = "release: not found"
+	msgErrPeekNotFound    = "peek: not found"
 )
 
 func TestProtocol_Put(t *testing.T) {
@@ -372,6 +373,31 @@ func TestProtocol_Release(t *testing.T) {
 			err := conn.Release(jobID, 10, 0)
 			So(err.Error(), ShouldEqual, msgErrReleaseNotFound)
 		})
+	})
+}
+
+func TestProtocol_Peek(t *testing.T) {
+	Convey("when a producer put a job to a specific tube", t, func() {
+		tubeName := randStr(6)
+		prodTube := beanstalk.Tube{Conn: newConn(t), Name: tubeName}
+		defer prodTube.Conn.Close()
+		bodyIn := []byte("garbanzo beans")
+		jobID, _ := prodTube.Put(bodyIn, 1, 0, putTTR)
+
+		Convey("the job can be peeked by anyone", func() {
+			c := newConn(t)
+			defer c.Close()
+			bodyOut, err := c.Peek(jobID)
+			So(err, ShouldBeNil)
+			So(bodyOut, ShouldResemble, bodyIn)
+		})
+	})
+
+	Convey("Peek an unknown job results in not_found", t, func() {
+		c := newConn(t)
+		defer c.Close()
+		_, err := c.Peek(1234)
+		So(err.Error(), ShouldEqual, msgErrPeekNotFound)
 	})
 }
 

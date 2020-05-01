@@ -147,6 +147,8 @@ func (c *cmdProcessor) processRequest(req *CmdRequest) {
 		resp = c.kickN(cli, req)
 	case KickJob:
 		resp = c.kick(cli, req)
+	case Peek:
+		resp = c.peek(cli, req)
 	case Put:
 		resp = c.put(cli, req)
 	case Release:
@@ -296,6 +298,26 @@ func (c *cmdProcessor) kickN(cli *client, req *CmdRequest) *CmdResponse {
 	}
 
 	return resp
+}
+
+func (c *cmdProcessor) peek(cli *client, req *CmdRequest) *CmdResponse {
+	resp := NewCmdResponseFromReq(req)
+	cmd, ok := req.cmd.(*idArg)
+	if !ok {
+		// Note: this is indicative of code-bug where the CmdType and cmd don't match up
+		log.Panicf("cmdProcessor.peek: cast-error, cannot cast to *idArg")
+	}
+
+	j, err := c.jsm.GetJob(cmd.id)
+	if err != nil {
+		resp.setResponse(MsgNotFound)
+		return resp
+	}
+
+	s := fmt.Sprintf("FOUND %d %d", j.ID(), j.BodySize())
+	sendCmdResponse(req.ID, cli, []byte(s), true /*hasMore*/)
+	sendCmdResponse(req.ID, cli, j.Body(), false /*hasMore*/)
+	return nil
 }
 
 func (c *cmdProcessor) releaseWith(cli *client, req *CmdRequest) *CmdResponse {
@@ -502,6 +524,8 @@ func NewCmdRequest(cmdData *CmdData, clientID state.ClientID) (CmdRequest, error
 		cmdRequest.cmd, err = NewKickNArg(cmdData)
 	case Put:
 		cmdRequest.cmd, err = NewPutArg(cmdData)
+	case Peek:
+		cmdRequest.cmd, err = NewIDArg(cmdData)
 	case Ignore, Use, Watch:
 		cmdRequest.cmd, err = NewTubeArg(cmdData)
 	case Release:
