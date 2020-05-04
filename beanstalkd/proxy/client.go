@@ -127,7 +127,7 @@ func timeTrack(start time.Time, name string) {
 func (c *Client) Put(nowSeconds int64, priority uint32, delay int64, ttr int,
 	bodySize int, body []byte, tubeName state.TubeName) (state.JobID, error) {
 	s := time.Now()
-	defer timeTrack(s, "client.Put")
+	// defer timeTrack(s, "client.Put")
 
 	ctx, cancel := context.WithTimeout(context.Background(), c.ConnTimeout)
 	defer cancel()
@@ -147,6 +147,7 @@ func (c *Client) Put(nowSeconds int64, priority uint32, delay int64, ttr int,
 		return state.JobID(0), err
 	}
 
+	log.Infof("Response: %v took %v", r.JobId, time.Since(s))
 	return state.JobID(r.JobId), err
 }
 

@@ -5,13 +5,14 @@ PROTOC=protoc
 DELETE=rm
 DOCKER=docker
 DOCKER_COMPOSE=docker-compose
+DOCKER_REPO=1xyz/coolbeans
 BINARY=coolbeans
 BUILD_BINARY=bin/$(BINARY)
 # go source files, ignore vendor directory
 SRC = $(shell find . -type f -name '*.go' -not -path "./vendor/*")
 # current git version short-hash
 VER = $(shell git rev-parse --short HEAD)
-TAG = "$(BINARY):$(VER)"
+DOCKER_TAG = "$(VER)"
 
 info:
 	@echo " target         ⾖ Description.                                    "
@@ -41,7 +42,8 @@ info:
 	@echo
 	@echo " Docker targets"
 	@echo " --------------"
-	@echo " docker-build        build the docker image $(TAG)                 "
+	@echo " docker-build        build image $(DOCKER_REPO):$(DOCKER_TAG)      "
+	@echo " docker-push         push image $(DOCKER_REPO):$(DOCKER_TAG)      "		
 	@echo " docker-compose-up   run docker-compose-up                         "
 	@echo " docker-compose-down run docker-compose-down                       "
 	@echo " ------------------------------------------------------------------"
@@ -124,7 +126,10 @@ tidy:
 	$(GO) mod tidy
 
 docker-build:
-	$(DOCKER) build -t $(TAG) -f Dockerfile .
+	$(DOCKER) build -t $(DOCKER_REPO):$(DOCKER_TAG) -f Dockerfile .
+
+docker-push: docker-build
+	$(DOCKER) push $(DOCKER_REPO):$(DOCKER_TAG)
 
 docker-compose-build:
 	$(DOCKER_COMPOSE) --file compose/docker-compose.yml --project-directory . build

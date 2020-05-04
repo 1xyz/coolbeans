@@ -7,6 +7,7 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"time"
 )
 
 type ReplicatedJsm interface {
@@ -123,12 +124,15 @@ func (j *JSMServer) KickN(ctx context.Context, req *v1.KickNRequest) (*v1.KickNR
 }
 
 func (j *JSMServer) Put(ctx context.Context, req *v1.PutRequest) (*v1.PutResponse, error) {
+	t := time.Now()
+
 	var resp v1.PutResponse
 	if err := j.performApply(v1.OpType_PUT, req, &resp); err != nil {
 		log.WithField("method", "Put").Errorf("performApply. Err=%v", err)
 		return nil, err
 	}
 
+	log.Infof("jsm.Put took %v sec", time.Since(t))
 	return &resp, nil
 }
 
