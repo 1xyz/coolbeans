@@ -18,8 +18,6 @@ type Config struct {
 	ConnectTimeout int
 }
 
-//var ConnTimeout = 30 * time.Second
-
 func (c Config) String() string {
 	return fmt.Sprintf("Listen Addr=%v, Port=%v JSMAddresses=%v ConnectTimeout=%v",
 		c.ListenAddr, c.ListenPort, c.JsmAddrs, c.ConnectTimeout)
@@ -53,7 +51,7 @@ func waitForShutdown(tcpSrv *proto.TcpServer) {
 }
 
 func RunBeanstalkd(c *Config) error {
-	log.Infof("Loaded Config: %v", c)
+	log.Debugf("Loaded Config: %v", c)
 	// CPU profiling by default
 	// defer profile.Start().Stop()
 
