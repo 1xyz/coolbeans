@@ -2,25 +2,27 @@ package beanstalkd
 
 import (
 	"fmt"
-	"github.com/1xyz/coolbeans/beanstalkd/proto"
-	log "github.com/sirupsen/logrus"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/1xyz/coolbeans/beanstalkd/proto"
+	log "github.com/sirupsen/logrus"
 )
 
 type Config struct {
-	ListenAddr string
-	ListenPort int
-	JsmAddrs   string
+	ListenAddr     string
+	ListenPort     int
+	JsmAddrs       string
+	ConnectTimeout int
 }
 
-var ConnTimeout = 30 * time.Second
+//var ConnTimeout = 30 * time.Second
 
 func (c Config) String() string {
-	return fmt.Sprintf("Listen Addr=%v, Port=%v JSMAddresses=%v",
-		c.ListenAddr, c.ListenPort, c.JsmAddrs)
+	return fmt.Sprintf("Listen Addr=%v, Port=%v JSMAddresses=%v ConnectTimeout=%v",
+		c.ListenAddr, c.ListenPort, c.JsmAddrs, c.ConnectTimeout)
 }
 
 // runTCPServer - creates and run a beanstalkd TCP server to
@@ -29,7 +31,7 @@ func (c Config) String() string {
 // Refer method: waitForShutdown,
 func runTCPServer(c *Config) *proto.TcpServer {
 	addr := fmt.Sprintf("%s:%v", c.ListenAddr, c.ListenPort)
-	tcpServer := proto.NewTcpServer(addr, c.JsmAddrs, ConnTimeout)
+	tcpServer := proto.NewTcpServer(addr, c.JsmAddrs, time.Duration(c.ConnectTimeout)*time.Second)
 	go func(tcpSrv *proto.TcpServer) {
 		if err := tcpSrv.Listen(); err != nil {
 			log.Errorf("tcpServer.listen err=%v", err)
@@ -51,7 +53,7 @@ func waitForShutdown(tcpSrv *proto.TcpServer) {
 }
 
 func RunBeanstalkd(c *Config) error {
-	log.Debugf("Loaded Config: %v", c)
+	log.Infof("Loaded Config: %v", c)
 	// CPU profiling by default
 	// defer profile.Start().Stop()
 

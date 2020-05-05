@@ -7,12 +7,13 @@ import (
 )
 
 func cmdBeanstalkd(argv []string, version string) {
-	usage := `usage: beanstalkd [-l=<addr> | --listen-addr=<addr>] [-p=<port> | --listen-port=<port>] [--jsm-addrs=<addrs>]
+	usage := `usage: beanstalkd [-l=<addr> | --listen-addr=<addr>] [-p=<port> | --listen-port=<port>] [--jsm-addrs=<addrs>] [-t=<timeout> | --connectTimeout=<timeout>]
 Options:
-  -h --help                          Show this screen.
-  -l=<address> --listen-addr=<addr>  Listen on address [default: 0.0.0.0].
-  -p=<port> --listen-port=<port>     Listen on port [default:11300]
-  -j=<addrs> --jsm-addrs=<addrs>     Connect to JSM servers, local if ignored [default: ].
+  -h --help                                  Show this screen.
+  -l=<address> --listen-addr=<addr>          Listen on address [default: 0.0.0.0].
+  -p=<port> --listen-port=<port>             Listen on port [default:11300]
+  -j=<addrs> --jsm-addrs=<addrs>             Connect to JSM servers, local if ignored [default: ].
+  -t=<timeout> --connect-timeout=<timeout>   Connection timeout in seconds [default: 10].
 `
 	opts, err := docopt.ParseArgs(usage, argv[1:], version)
 	if err != nil {
