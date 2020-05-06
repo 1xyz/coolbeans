@@ -71,13 +71,16 @@ type Config struct {
 
 	// Inmem is a boolean, controls if the data is persisted
 	Inmem bool
+
+	// local node id of this node
+	LocalNodeID string
 }
 
 type Store struct {
-	jsm     state.JSM
-	c       *Config
-	raft    *raft.Raft
-	localID string
+	jsm       state.JSM
+	c         *Config
+	raft      *raft.Raft
+	transport *raft.NetworkTransport
 }
 
 func NewStore(c *Config) (*Store, error) {
@@ -99,11 +102,10 @@ func NewStore(c *Config) (*Store, error) {
 // Open opens the store. If enableSingle is set, and there are no existing peers,
 // then this node becomes the first node, and therefore leader, of the cluster.
 // localID should be the server identifier for this node.
-func (s *Store) Open(enableSingle bool, localID string) error {
-	s.localID = localID
+func (s *Store) Open() error {
 	// Setup Raft configuration.
 	config := raft.DefaultConfig()
-	config.LocalID = raft.ServerID(localID)
+	config.LocalID = raft.ServerID(s.c.LocalNodeID)
 	config.SnapshotThreshold = s.c.SnapshotThreshold
 	config.TrailingLogs = s.c.TrailingLogs
 	config.SnapshotInterval = s.c.SnapshotInterval
@@ -151,18 +153,33 @@ func (s *Store) Open(enableSingle bool, localID string) error {
 	}
 
 	s.raft = ra
-	if enableSingle {
-		configuration := raft.Configuration{
-			Servers: []raft.Server{
-				{
-					ID:      config.LocalID,
-					Address: transport.LocalAddr(),
-				},
-			},
-		}
-		ra.BootstrapCluster(configuration)
+	s.transport = transport
+	return nil
+}
+
+func (s *Store) BootstrapCluster(nc map[string]string) error {
+	servers := make([]raft.Server, 0)
+	for id, addr := range nc {
+		servers = append(servers, raft.Server{
+			ID:      raft.ServerID(id),
+			Address: raft.ServerAddress(addr),
+		})
 	}
 
+	configuration := raft.Configuration{
+		Servers: servers,
+		// Servers: []raft.Server{
+		// 	{
+		// 		ID:      raft.ServerID(s.c.LocalNodeID),
+		// 		Address: s.transport.LocalAddr(),
+		// 	},
+		// },
+	}
+
+	for _, s := range configuration.Servers {
+		log.Infof("Id = %v, addr=%v", s.ID, s.Address)
+	}
+	s.raft.BootstrapCluster(configuration)
 	return nil
 }
 
@@ -171,7 +188,7 @@ func (s *Store) Open(enableSingle bool, localID string) error {
 //
 // It is required that the node that this is called into is a leader node.
 func (s *Store) Join(nodeID, addr string) error {
-	logc := log.WithFields(log.Fields{"method": "Join", "localID": s.localID,
+	logc := log.WithFields(log.Fields{"method": "Join", "localID": s.c.LocalNodeID,
 		"nodeID": nodeID, "addr": addr})
 
 	rCfg, err := s.GetRaftConfiguration()
@@ -229,7 +246,7 @@ func (s *Store) Ready() bool {
 //
 // It is required that the node that this is called into is a leader node.
 func (s *Store) Leave(nodeID string) error {
-	logc := log.WithFields(log.Fields{"method": "Leave", "localID": s.localID, "nodeID": nodeID})
+	logc := log.WithFields(log.Fields{"method": "Leave", "localID": s.c.LocalNodeID, "nodeID": nodeID})
 
 	rCfg, err := s.GetRaftConfiguration()
 	if err != nil {

@@ -60,7 +60,6 @@ options:
 	if err := runCoolbeans(c, localNodeID, joinNodeID); err != nil {
 		log.Fatalf("runcoolbeans err = %v", err)
 	}
-
 }
 
 type ClusterConfig struct {
@@ -179,6 +178,7 @@ func runCoolbeans(c *ClusterConfig, nodeID string, joinID string) error {
 		SnapshotInterval:    time.Duration(c.Cluster.SnapshotInterval),
 		TrailingLogs:        c.Cluster.TrailingLogs,
 		SnapshotThreshold:   c.Cluster.SnapshotThreshold,
+		LocalNodeID:         nodeID,
 	})
 	if err != nil {
 		return err
@@ -189,10 +189,21 @@ func runCoolbeans(c *ClusterConfig, nodeID string, joinID string) error {
 		enableSingle = true
 	}
 
-	if err := s.Open(enableSingle, nodeID); err != nil {
-		logc.Errorf("store.Open enableSingle=%v nodeId=%v err=%v",
-			enableSingle, nodeID, err)
+	if err := s.Open(); err != nil {
+		logc.Errorf("runCoolBeans: store.Open err=%v", err)
 		return err
+	}
+
+	if enableSingle {
+		m := make(map[string]string)
+		for _, n := range c.Nodes {
+			m[n.ID] = n.RaftAddr
+		}
+
+		if err := s.BootstrapCluster(m); err != nil {
+			log.Errorf("runCoolBeans: s.BootstrapCluster err = %v", err)
+			return err
+		}
 	}
 
 	if joinID != "" {
