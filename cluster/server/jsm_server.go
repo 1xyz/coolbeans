@@ -1,4 +1,4 @@
-package cluster
+package server
 
 import (
 	v1 "github.com/1xyz/coolbeans/api/v1"

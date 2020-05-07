@@ -1,12 +1,11 @@
 package cmd
 
 import (
-	"github.com/1xyz/coolbeans/beanstalkd"
 	"github.com/docopt/docopt-go"
 	log "github.com/sirupsen/logrus"
 )
 
-func cmdBeanstalkd(argv []string, version string) {
+func CmdBeanstalkd(argv []string, version string) {
 	usage := `usage: beanstalkd [-l=<addr> | --listen-addr=<addr>] [-p=<port> | --listen-port=<port>] [--jsm-addrs=<addrs>] [-t=<timeout> | --connectTimeout=<timeout>]
 Options:
   -h --help                                  Show this screen.
@@ -20,12 +19,12 @@ Options:
 		log.Fatalf("error parsing arguments. err=%v", err)
 	}
 
-	var bsConfig beanstalkd.Config
+	var bsConfig Config
 	if err := opts.Bind(&bsConfig); err != nil {
 		log.Fatalf("error in opts.bind. err=%v", err)
 	}
 
-	if err := beanstalkd.RunBeanstalkd(&bsConfig); err != nil {
+	if err := RunBeanstalkd(&bsConfig); err != nil {
 		log.Fatalf("error RunBeanstalkd. err=%v", err)
 	}
 }

@@ -3,8 +3,8 @@ package cmd
 import (
 	"fmt"
 	v1 "github.com/1xyz/coolbeans/api/v1"
-	"github.com/1xyz/coolbeans/cluster"
 	"github.com/1xyz/coolbeans/cluster/client"
+	"github.com/1xyz/coolbeans/cluster/server"
 	"github.com/1xyz/coolbeans/store"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/docopt/docopt-go"
@@ -126,12 +126,12 @@ func RunCoolbeans(c *ClusterNodeConfig) error {
 	}
 	var opts []grpc.ServerOption
 	grpcServer := grpc.NewServer(opts...)
-	v1.RegisterClusterServer(grpcServer, cluster.NewClusterServer(s))
-	jsmServer := cluster.NewJSMServer(s)
+	v1.RegisterClusterServer(grpcServer, server.NewClusterServer(s))
+	jsmServer := server.NewJSMServer(s)
 	v1.RegisterJobStateMachineServer(grpcServer, jsmServer)
 	go jsmServer.RunController()
 	healthgrpc.RegisterHealthServer(grpcServer,
-		cluster.NewHealthCheckServer(s))
+		server.NewHealthCheckServer(s))
 	log.Infof("RunCoolbeans: Cluster node server listen on addr=%v", c.NodeListenAddr)
 	lis, err := net.Listen("tcp", c.NodeListenAddr)
 	if err != nil {

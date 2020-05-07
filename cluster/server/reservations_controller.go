@@ -1,4 +1,4 @@
-package cluster
+package server
 
 import (
 	"errors"
@@ -13,24 +13,24 @@ import (
 //
 // A high level overview:
 //
-// ┌───────────────┐            ┌───────────────┐
-// │  State Proxy  │            │  State Proxy  │
-// |     Client    | ......     |     Client    |
-// └───────────────┘            └───────────────┘
-//         ^                            ^
-//         |                            |
-//         |                            | (stream Reservations)
-//         |                            |
-// ┌───────────────────────────────────────────────┐
-// │              reservationsController           │
-// └───────────────────────────────────────────────┘
+// ┌----------------┐        ┌----------------┐
+// │  State Proxy   │        │  State Proxy   │
+// │     Client     │ ...... │     Client     │
+// └----------------┘        └----------------┘
+//         ^                           ^
+//         |                           |
+//         |                           | (stream Reservations)
+//         |                           |
+// ┌---------------------------------------------------┐
+// │           reservationsController                  │
+// └---------------------------------------------------┘
 //         |                      ^
 //         | (every 1s)           | Reservations
 //         |                      |
 //         V                      |
-// ┌───────────────────────────────────────────────┐
-// │                 JSM.Tick()                    │
-// └───────────────────────────────────────────────┘
+// ┌---------------------------------------------------┐
+// │                 JSM.Tick()                        │
+// └---------------------------------------------------┘
 type ReservationsController struct {
 	// connProxies, represents connected proxy clients which
 	// can receive reservation updates.

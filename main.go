@@ -2,7 +2,8 @@ package main
 
 import (
 	"fmt"
-	command "github.com/1xyz/coolbeans/cmd"
+	cmd_beanstalkd "github.com/1xyz/coolbeans/beanstalkd/cmd"
+	cmd_cluster "github.com/1xyz/coolbeans/cluster/cmd"
 	"github.com/docopt/docopt-go"
 	log "github.com/sirupsen/logrus"
 	"os"
@@ -46,6 +47,18 @@ See 'coolbeans <command> --help' for more information on a specific command.
 		log.SetLevel(log.DebugLevel)
 	}
 
-	command.RunCommand(cmd, cmdArgs, version)
+	RunCommand(cmd, cmdArgs, version)
 	log.Infof("done")
+}
+
+func RunCommand(c string, args []string, version string) {
+	argv := append([]string{c}, args...)
+	switch c {
+	case "cluster-node":
+		cmd_cluster.CmdClusterNode(argv, version)
+	case "beanstalkd":
+		cmd_beanstalkd.CmdBeanstalkd(argv, version)
+	default:
+		log.Fatalf("RunCommand: %s is not a supported command. See 'coolbeans help'", c)
+	}
 }

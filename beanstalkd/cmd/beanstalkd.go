@@ -1,4 +1,4 @@
-package beanstalkd
+package cmd
 
 import (
 	"fmt"

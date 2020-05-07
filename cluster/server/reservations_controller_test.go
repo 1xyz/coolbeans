@@ -1,11 +1,11 @@
-package cluster_test
+package server_test
 
 import (
 	"errors"
 	"fmt"
 	v1 "github.com/1xyz/coolbeans/api/v1"
-	"github.com/1xyz/coolbeans/cluster"
-	"github.com/1xyz/coolbeans/cluster/clusterfakes"
+	"github.com/1xyz/coolbeans/cluster/server"
+	"github.com/1xyz/coolbeans/cluster/server/serverfakes"
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
@@ -21,9 +21,9 @@ func TestReservationsController_RunStop(t *testing.T) {
 		{nil, errors.New("hello")},
 	}
 	for _, test := range tests {
-		jsmTick := &clusterfakes.FakeJsmTick{}
+		jsmTick := &serverfakes.FakeJsmTick{}
 		jsmTick.TickReturns(test.tr, test.err)
-		rctrl := cluster.NewReservationsController(jsmTick)
+		rctrl := server.NewReservationsController(jsmTick)
 
 		doneCh := make(chan bool)
 		go func() {
@@ -53,7 +53,7 @@ func TestReservationsController_Register(t *testing.T) {
 	assert.NotNilf(t, respCh, "expect respCh to not be nil")
 
 	respCh, err = rctrl.Register("foobar")
-	assert.Equalf(t, cluster.ErrProxyExists, err, "expect Err to be ErrProxyExists")
+	assert.Equalf(t, server.ErrProxyExists, err, "expect Err to be ErrProxyExists")
 	assert.Nilf(t, respCh, "expect respCh to be nil")
 }
 
@@ -87,7 +87,7 @@ func TestReservationsController_Run_With_Assinged_Reservations(t *testing.T) {
 
 	respCh, _ := rctrl.Register(proxyID)
 	for r := range respCh {
-		assert.Equalf(t, cluster.Reservation, r.RespType, "expect respType to be reservation")
+		assert.Equalf(t, server.Reservation, r.RespType, "expect respType to be reservation")
 		assert.Equalf(t, nReservations, len(r.Reservations), "expect count of reservation to be %v actual=%v",
 			nReservations, len(r.Reservations))
 		break
@@ -104,8 +104,8 @@ func TestReservationsController_Run_With_NoAssigned_Reservations(t *testing.T) {
 
 	respCh, _ := rctrl.Register("proxy2")
 	for r := range respCh {
-		assert.Equalf(t, cluster.Reservation, r.RespType,
-			"expect respType to be of type %v got %v", cluster.Reservation, r.RespType)
+		assert.Equalf(t, server.Reservation, r.RespType,
+			"expect respType to be of type %v got %v", server.Reservation, r.RespType)
 		assert.Nilf(t, r.Reservations, "expect reservations to be nil")
 		break
 	}
@@ -113,10 +113,10 @@ func TestReservationsController_Run_With_NoAssigned_Reservations(t *testing.T) {
 	rctrl.UnRegister("proxy2", respCh)
 }
 
-func runTestController(t *testing.T, doneCh chan<- bool) *cluster.ReservationsController {
-	jsmTick := &clusterfakes.FakeJsmTick{}
+func runTestController(t *testing.T, doneCh chan<- bool) *server.ReservationsController {
+	jsmTick := &serverfakes.FakeJsmTick{}
 	jsmTick.TickReturns(nil, errors.New("foo"))
-	rctrl := cluster.NewReservationsController(jsmTick)
+	rctrl := server.NewReservationsController(jsmTick)
 
 	go func() {
 		if err := rctrl.Run(); err != nil {
@@ -129,7 +129,7 @@ func runTestController(t *testing.T, doneCh chan<- bool) *cluster.ReservationsCo
 	return rctrl
 }
 
-func runtestControllerWithResponses(t *testing.T, doneCh chan<- bool, proxyID string, nReservations int) *cluster.ReservationsController {
+func runtestControllerWithResponses(t *testing.T, doneCh chan<- bool, proxyID string, nReservations int) *server.ReservationsController {
 	resvn := make([]*v1.Reservation, nReservations)
 	for i := 0; i < nReservations; i++ {
 		resvn[i] = &v1.Reservation{
@@ -150,9 +150,9 @@ func runtestControllerWithResponses(t *testing.T, doneCh chan<- bool, proxyID st
 		},
 	}
 
-	jsmTick := &clusterfakes.FakeJsmTick{}
+	jsmTick := &serverfakes.FakeJsmTick{}
 	jsmTick.TickReturns(&resp, nil)
-	rctrl := cluster.NewReservationsController(jsmTick)
+	rctrl := server.NewReservationsController(jsmTick)
 
 	go func() {
 		if err := rctrl.Run(); err != nil {
