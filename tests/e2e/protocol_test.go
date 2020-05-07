@@ -1,6 +1,6 @@
 // +build integration
 
-package integration_test
+package e2e_test
 
 import (
 	"fmt"

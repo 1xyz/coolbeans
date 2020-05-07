@@ -38,7 +38,7 @@ info:
 	@echo " test       run unit-tests                                         "
 	@echo " testc      run unit-tests w/ coverage                             "
 	@echo " testv      run unit-tests verbose                                 "
-	@echo " test-int   run integration-tests requires a running beanstalkd    "
+	@echo " test-e2e   run E2E tests requires a running beanstalkd            "
 	@echo
 	@echo " Docker targets"
 	@echo " --------------"
@@ -117,9 +117,9 @@ testc: build
 	./coverage_test.sh 
 	$(GO) tool cover -html=coverage.txt
 
-.PHONY: test-int
-test-int: build
-	$(GO) test -v -tags=integration ./integration
+.PHONY: test-e2e
+test-e2e:
+	$(GO) test -v -tags=integration ./tests/e2e
 
 .PHONY: tidy
 tidy:
