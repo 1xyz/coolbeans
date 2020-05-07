@@ -1,275 +1,256 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	v1 "github.com/1xyz/coolbeans/api/v1"
 	"github.com/1xyz/coolbeans/cluster"
+	"github.com/1xyz/coolbeans/cluster/client"
 	"github.com/1xyz/coolbeans/store"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/docopt/docopt-go"
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	healthgrpc "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/status"
-	"io"
-	"io/ioutil"
 	"net"
 	"os"
+	"strings"
 	"time"
 )
 
-func cmdClusterNode(argv []string, version string) {
-	usage := `usage: cluster-node [--node-id=<id>]  [--config-file=<file>] [--join-id=<id>]
+type ClusterNodeConfig struct {
+	NodeId          string
+	NodeListenAddr  string
+	RootDir         string
+	NodePeerAddrs   string
+	BootstrapNodeId string
+	PeerTimeoutSecs int
+
+	MaxClusterJoinAttempts       int
+	ClusterJoinRetryIntervalSecs int
+
+	RaftListenAddr       string
+	RaftAdvertizedAddr   string
+	RaftTimeoutSecs      int
+	MaxPoolSize          int
+	NoInMem              bool
+	RestoreTimeoutSecs   int
+	RetainSnapshotCount  int
+	SnapshotThreshold    int
+	TrailingLogCount     int
+	SnapshotIntervalSecs int
+}
+
+func CmdClusterNode(argv []string, version string) {
+	usage := `usage: cluster-node --node-id=<id> --root-dir=<dir> --bootstrap-node-id=<id> [options]
+   
 options:
     -h, --help
-    --node-id=<id>           unique identifier for this node.
-    --join-id=<id>           unique identifier of the node to join with the cluster [default: ].
-    --config-file=<config>   configuration json file [default: cb-config.json].`
+    --node-id=<id>               A unique identifier for this node.
+    --root-dir=<dir>             Root Directory where the snapshot is stored.
+    --node-listen-addr=<addr>    Listen/Bind Address for the node cluster service [default: 127.0.0.1:11000].
+    --bootstrap-node-id=<id>     Identifier of the node that should perform bootstrapping.
+    --node-peer-addrs=<addrs>    Comma separated node addresses of all cluster node service addresses [default: ].
+    --peer-timeout-secs=<secs>   Peer grpc timeout in seconds [default: 10].
+   
+Cluster join options:
+    --max-cluster-join-attempts=<n>            The maximum number of join attempts. Defaults to 0, 
+                                               which will retry indefinitely [default: 0]
+    --cluster-join-retry-interval-secs=<secs>  Time in seconds to wait between retrying to join the cluster [default: 1].
+    
+Raft options:
+    --raft-listen-addr=<addr>        Listen/Bind Address for Raft service [default: 127.0.0.1:21000].
+    --raft-advertized-addr=<addr>    Advertized address for Raft service [default: 127.0.0.1:21000].
+    --raft-timeout-secs=<secs>       Raft peer network connection timeout in seconds [default: 30].
+    --max-pool-size=<n>              Maximum number of raft connections pooled [default: 3].
+    --no-in-mem                      If set raft logs are persisted to disk [default: false].
+    --restore-timeout-secs=<secs>    Timeout in seconds for a snapshot restore operation [default: 60].
+    --retain-snapshot-count=<n>      The maximum number of file snapshots to retain on disk [default: 5].
+    --snapshot-threshold=<n>         Controls how many outstanding logs there must be before a 
+                                     Raft snapshot is taken [default: 8192].
+    --trailing-log-count=<n>         Controls how many logs are left after a snapshot. This is used so 
+                                     that we can quickly replay logs on a follower instead of being forced 
+                                     to send an entire snapshot [default: 10240].
+    --snapshot-interval-secs=<secs>  Controls how often the raft library checks to perform a snapshot.
+                                     The library randomly staggers between this value and 2x this value to 
+                                     avoid all the nodes in the entire cluster from performing a snapshot 
+                                     at once [default: 120].`
 
 	opts, err := docopt.ParseArgs(usage, argv[1:], version)
 	if err != nil {
-		log.Fatalf("error parsing arguments. err=%v", err)
+		log.Fatalf("cmdClusterNode: error parsing arguments. err=%v", err)
 	}
-
-	log.Infof("opts=%v\n", opts)
-
-	localNodeID, err := opts.String("--node-id")
-	if err != nil {
-		log.Fatalf("error reading --node-id %v", err)
+	var cfg ClusterNodeConfig
+	if err := opts.Bind(&cfg); err != nil {
+		log.Fatalf("cmdClusterNode: error in opts.bind. err=%v", err)
 	}
-
-	joinNodeID, err := opts.String("--join-id")
-	if err != nil {
-		log.Fatalf("error reading --join-id %v", err)
-	}
-
-	file, err := opts.String("--config-file")
-	if err != nil {
-		log.Fatalf("error reading --config-file variable %v", err)
-	}
-
-	c, err := LoadFrom(file)
-	if err != nil {
-		log.Fatalf("cannot load config from file=%v err=%v", file, err)
-	}
-
-	log.Infof("NodeID = %v config-%v JoinNodeID=%v", localNodeID, c, joinNodeID)
-
-	if err := runCoolbeans(c, localNodeID, joinNodeID); err != nil {
-		log.Fatalf("runcoolbeans err = %v", err)
+	spew.Dump(cfg)
+	if err := RunCoolbeans(&cfg); err != nil {
+		log.Fatalf("cmdClusterNode: runCoolbeans: err = %v", err)
 	}
 }
 
-type ClusterConfig struct {
-	// Cluster wide configuration
-	Cluster struct {
-		Name                string   `json:"name"`
-		InMem               bool     `json:"in_mem"`
-		RaftTimeout         Duration `json:"raft_timeout"`
-		RestoreTimeout      Duration `json:"restore_timeout"`
-		RetainSnasphotCount int      `json:"retain_snasphot_count"`
-		MaxPool             int      `json:"max_pool"`
-		SnapshotThreshold   uint64   `json:"snapshot_threshold"`
-		TrailingLogs        uint64   `json:"trailing_logs"`
-		SnapshotInterval    Duration `json:"snapshot_interval"`
-	} `json:"cluster"`
-	// Node(s) specific configuration
-	Nodes []NodeConfig `json:"nodes"`
-}
-
-type NodeConfig struct {
-	ID         string `json:"id"`
-	ListenAddr string `json:"listen_addr"`
-	RaftAddr   string `json:"raft_addr"`
-	RootDir    string `json:"root_dir"`
-}
-
-func (c *ClusterConfig) getNode(nodeID string) (*NodeConfig, error) {
-	for _, nc := range c.Nodes {
-		if nc.ID == nodeID {
-			return &nc, nil
-		}
-	}
-
-	return nil, fmt.Errorf("node with id=%v not found", nodeID)
-}
-
-type Duration time.Duration
-
-func (d Duration) MarshalJSON() ([]byte, error) {
-	return json.Marshal(time.Duration(d).String())
-}
-
-func (d *Duration) UnmarshalJSON(b []byte) error {
-	var v interface{}
-	if err := json.Unmarshal(b, &v); err != nil {
+func RunCoolbeans(c *ClusterNodeConfig) error {
+	log.Infof("RunCoolbeans: creating directory for node=%v at %v", c.NodeId, c.RootDir)
+	if err := os.MkdirAll(c.RootDir, 0700); err != nil {
 		return err
 	}
-	switch value := v.(type) {
-	case float64:
-		*d = Duration(time.Duration(value))
-		return nil
-	case string:
-		tmp, err := time.ParseDuration(value)
-		if err != nil {
-			return err
-		}
-		*d = Duration(tmp)
-		return nil
-	default:
-		return fmt.Errorf("invalid duration")
-	}
-}
-
-func (d Duration) String() string {
-	return fmt.Sprintf("%v", time.Duration(d))
-}
-
-func ReadFrom(r io.Reader) (*ClusterConfig, error) {
-	b, err := ioutil.ReadAll(r)
-	if err != nil {
-		return nil, err
-	}
-
-	var c ClusterConfig
-	if err := json.Unmarshal(b, &c); err != nil {
-		return nil, err
-	} else {
-		return &c, nil
-	}
-}
-
-func LoadFrom(filename string) (*ClusterConfig, error) {
-	f, err := os.Open(filename)
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() {
-		if err := f.Close(); err != nil {
-			log.Errorf("error closing file %v", err)
-		}
-	}()
-	return ReadFrom(f)
-}
-
-func runCoolbeans(c *ClusterConfig, nodeID string, joinID string) error {
-	logc := log.WithField("method", "runCoolBeans")
-	nc, err := c.getNode(nodeID)
-	if err != nil {
-		return err
-	}
-
-	logc.Infof("creating directory for node=%v at %v", nc.ID, nc.RootDir)
-	if err := os.MkdirAll(nc.RootDir, 0700); err != nil {
-		return err
-	}
-
+	peersAddrs := parsePeerAddrs(c.NodePeerAddrs)
 	s, err := store.NewStore(&store.Config{
-		RetainSnasphotCount: c.Cluster.RetainSnasphotCount,
-		MaxPool:             c.Cluster.MaxPool,
-		RaftTimeout:         time.Duration(c.Cluster.RaftTimeout),
-		RestoreTimeout:      time.Duration(c.Cluster.RestoreTimeout),
-		RootDir:             nc.RootDir,
-		RaftBindAddr:        nc.RaftAddr,
-		Inmem:               c.Cluster.InMem,
-		SnapshotInterval:    time.Duration(c.Cluster.SnapshotInterval),
-		TrailingLogs:        c.Cluster.TrailingLogs,
-		SnapshotThreshold:   c.Cluster.SnapshotThreshold,
-		LocalNodeID:         nodeID,
+		RetainSnasphotCount: c.RetainSnapshotCount,
+		MaxPool:             c.MaxPoolSize,
+		RaftTimeout:         time.Duration(c.RaftTimeoutSecs) * time.Second,
+		RestoreTimeout:      time.Duration(c.RestoreTimeoutSecs) * time.Second,
+		RootDir:             c.RootDir,
+		RaftBindAddr:        c.RaftListenAddr,
+		Inmem:               !c.NoInMem,
+		SnapshotInterval:    time.Duration(c.SnapshotIntervalSecs) * time.Second,
+		TrailingLogs:        uint64(c.TrailingLogCount),
+		SnapshotThreshold:   uint64(c.SnapshotThreshold),
+		LocalNodeID:         c.NodeId,
 	})
 	if err != nil {
 		return err
 	}
-
-	enableSingle := false
-	if joinID == "" {
-		enableSingle = true
-	}
-
 	if err := s.Open(); err != nil {
-		logc.Errorf("runCoolBeans: store.Open err=%v", err)
+		log.Errorf("RunCoolbeans: store.Open err=%v", err)
 		return err
 	}
-
-	if enableSingle {
-		m := make(map[string]string)
-		for _, n := range c.Nodes {
-			m[n.ID] = n.RaftAddr
-		}
-
-		if err := s.BootstrapCluster(m); err != nil {
-			log.Errorf("runCoolBeans: s.BootstrapCluster err = %v", err)
-			return err
+	if err := BootstrapCluster(c, s, peersAddrs); err != nil {
+		log.Errorf("RunCoolbeans: BootstrapCluster err=%v", err)
+		if err := JoinCluster(c, peersAddrs); err != nil {
+			log.Errorf("RunCoolbeans: BootstrapCluster JoinCluster failed! %v", err)
+			return fmt.Errorf("bootstrapCluster JoinCluster failed err %w", err)
 		}
 	}
-
-	if joinID != "" {
-		remoteNC, err := c.getNode(joinID)
-		if err != nil {
-			logc.Errorf("c.getNode joinID=%v. err=%v", joinID, err)
-			return err
-		}
-
-		if err := joinNode(nc, remoteNC, time.Duration(c.Cluster.RaftTimeout)); err != nil {
-			logc.Errorf("joinNode err=%v", err)
-			return err
-		}
-	}
-
 	var opts []grpc.ServerOption
 	grpcServer := grpc.NewServer(opts...)
-	v1.RegisterClusterServer(grpcServer,
-		cluster.NewClusterServer(s))
+	v1.RegisterClusterServer(grpcServer, cluster.NewClusterServer(s))
 	jsmServer := cluster.NewJSMServer(s)
-	v1.RegisterJobStateMachineServer(grpcServer,
-		jsmServer)
+	v1.RegisterJobStateMachineServer(grpcServer, jsmServer)
 	go jsmServer.RunController()
 	healthgrpc.RegisterHealthServer(grpcServer,
 		cluster.NewHealthCheckServer(s))
-
-	logc.Infof("tcp server listen on %v", nc.ListenAddr)
-	lis, err := net.Listen("tcp", nc.ListenAddr)
+	log.Infof("RunCoolbeans: Cluster node server listen on addr=%v", c.NodeListenAddr)
+	lis, err := net.Listen("tcp", c.NodeListenAddr)
 	if err != nil {
-		return fmt.Errorf("failed to listen: %v", err)
+		return fmt.Errorf("RunCoolbeans: failed to listen: %w", err)
 	}
-
 	return grpcServer.Serve(lis)
 }
 
-func joinNode(LocalNC, remoteNC *NodeConfig, timeout time.Duration) error {
-	conn, err := grpc.Dial(remoteNC.ListenAddr, grpc.WithInsecure(), grpc.WithBlock())
+func BootstrapCluster(c *ClusterNodeConfig, s *store.Store, peerAddrs []string) error {
+	b, err := CanBootstrapCluster(c, peerAddrs)
 	if err != nil {
-		return fmt.Errorf("err grpc.Dial remote: %v. err: %v", remoteNC.ListenAddr, err)
+		return err
+	}
+	if !b {
+		return fmt.Errorf("canBootstrapCluster=false. cluster can't be bootstrapped")
 	}
 
-	defer conn.Close()
+	bootstrapAddr := c.RaftAdvertizedAddr
+	if len(bootstrapAddr) == 0 {
+		bootstrapAddr = c.RaftListenAddr
+	}
+	log.Infof("BootstrapCluster: Attempting to bootstrap cluster from node %v using addr=%v", c.NodeId, bootstrapAddr)
+	if err := s.BootstrapCluster(map[string]string{c.NodeId: bootstrapAddr}); err != nil {
+		return fmt.Errorf("s.BootstrapCluster. err = %w", err)
+	}
+	return nil
+}
 
-	c := v1.NewClusterClient(conn)
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
+func CanBootstrapCluster(c *ClusterNodeConfig, peerAddrs []string) (bool, error) {
+	if c.BootstrapNodeId != c.NodeId {
+		log.Infof("CanBootstrapCluster: cannot bootstrap on this node BootstrapNodeId: %s localNodeId: %s",
+			c.BootstrapNodeId, c.NodeId)
+		return false, nil
+	}
+	if len(peerAddrs) == 0 {
+		log.Infof("No peers defined assuming a single node cluster")
+		return true, nil
+	}
+	for _, addr := range peerAddrs {
+		log.Infof("CanBootstrapCluster: Connect addr = %v", addr)
+		nodeCli, err := client.NewClusterNodeClient(addr, time.Duration(c.PeerTimeoutSecs)*time.Second, grpc.WithInsecure())
+		if err != nil {
+			log.Errorf("CanBootstrapCluster: client.NewClusterNodeClient err %v", err)
+			nodeCli.Close()
+			return false, err
+		}
 
-	nRetry := 3
-	waitDuration := time.Second
-	req := &v1.JoinRequest{NodeId: LocalNC.ID, Addr: LocalNC.RaftAddr}
-	for i := 0; i < nRetry; i++ {
-		if _, err = c.Join(ctx, req); err != nil {
+		if _, err := nodeCli.IsNodeLeader(); err != nil {
 			st, ok := status.FromError(err)
-			if ok && st.Code() == codes.FailedPrecondition && st.Message() == store.ErrNotRaftLeader.Error() {
-				log.Errorf("join failed at node err=%v. retrying attempt = %d", st.Message(), (i + 1))
-				time.Sleep(waitDuration)
-				waitDuration = waitDuration * 2
+			if ok && st.Code() == codes.Unavailable {
+				log.Warnf("GRPC unavailable error failed at node addr=%v err=%v", addr, st.Message())
+				nodeCli.Close()
 				continue
 			}
 
-			return err
+			log.Warnf("CanBootstrapCluster: Node is available err = %v", err)
+			nodeCli.Close()
+			return false, nil
+		} else {
+			log.Infof("CanBootstrapCluster: Request returned successfully")
+			nodeCli.Close()
+			return false, nil
 		}
-
-		log.Infof("join completed sucessfully!")
-		break
 	}
 
-	return nil
+	return true, nil
+}
+
+func parsePeerAddrs(addr string) []string {
+	peersAddrs := strings.Split(addr, ",")
+	if len(peersAddrs) == 1 && peersAddrs[0] == "" {
+		log.Infof("CanBootstrapCluster: peerAddrs is empty")
+		return make([]string, 0)
+	}
+	return peersAddrs
+}
+
+func JoinCluster(c *ClusterNodeConfig, peerAddrs []string) error {
+	nodeClients := make([]*client.ClusterNodeClient, len(peerAddrs))
+	for i, addr := range peerAddrs {
+		if nc, err := client.NewClusterNodeClient(addr,
+			time.Duration(c.PeerTimeoutSecs)*time.Second, grpc.WithInsecure()); err != nil {
+			return fmt.Errorf("joinCluster: client.NewClusterNodeClient addr=%v %w", addr, err)
+		} else {
+			nodeClients[i] = nc
+		}
+	}
+
+	nRetry := c.MaxClusterJoinAttempts
+	waitDuration := time.Duration(c.ClusterJoinRetryIntervalSecs) * time.Second
+	i := 0
+	for {
+		if nRetry > 0 && i >= nRetry {
+			break
+		}
+		for _, nc := range nodeClients {
+			log.Infof("Joincluster (attempt: %d): trying to connect to addr = %v ...", (i + 1), nc.HostAddr)
+			err := nc.JoinCluster(c.NodeId, c.RaftListenAddr)
+			if err != nil {
+				st, ok := status.FromError(err)
+				if !ok {
+					log.Warnf("JoinCluster: Unhandled err = %v", err)
+					return err
+				}
+				if st.Code() == codes.Unavailable {
+					log.Warnf("JoinCluster: GRPC unavailable error failed at node addr=%v err=%v", nc.HostAddr, st.Message())
+					continue
+				}
+				if st.Code() == codes.FailedPrecondition && st.Message() == store.ErrNotRaftLeader.Error() {
+					log.Warnf("JoinCluster: join failed at node err=%v. retrying attempt = %d", st.Message(), (i + 1))
+					continue
+				}
+			}
+			log.Infof("JoinCluster: joined cluster successfully")
+			return nil
+		}
+
+		time.Sleep(waitDuration)
+		i++
+	}
+	return fmt.Errorf("joinCluster: unable to join cluster")
 }

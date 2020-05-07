@@ -1,3 +1,3 @@
 # Setup of a single node cluster with beanstalkd-0 as a proxy connected 
-cluster-node0: ./bin/coolbeans --verbose cluster-node --node-id bean0
+cluster-node0: ./bin/coolbeans cluster-node --node-id bean0 --root-dir /tmp/single-bean0 --bootstrap-node-id bean0 --raft-listen-addr=127.0.0.1:21000 --node-listen-addr=127.0.0.1:11000
 beanstalkd-0:  ./bin/coolbeans --verbose beanstalkd -l 127.0.0.1 -j 127.0.0.1:11000 -p 11300

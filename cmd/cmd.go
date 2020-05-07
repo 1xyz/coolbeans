@@ -8,7 +8,7 @@ func RunCommand(c string, args []string, version string) {
 	argv := append([]string{c}, args...)
 	switch c {
 	case "cluster-node":
-		cmdClusterNode(argv, version)
+		CmdClusterNode(argv, version)
 	case "beanstalkd":
 		cmdBeanstalkd(argv, version)
 	default:

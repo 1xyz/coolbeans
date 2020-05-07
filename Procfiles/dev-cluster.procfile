@@ -1,5 +1,8 @@
 # Setup of a three node cluster with beanstalkd-0 as a proxy connected 
-cluster-node0: ./bin/coolbeans cluster-node --node-id bean0
-cluster-node1: ./bin/coolbeans cluster-node --node-id bean1 --join bean0
-cluster-node2: ./bin/coolbeans cluster-node --node-id bean2 --join bean0
+cluster-node0: ./bin/coolbeans cluster-node --node-id bean0 --root-dir /tmp/bean0 --bootstrap-node-id bean0 --node-peer-addrs=:11000,:12000,:13000 --raft-listen-addr=127.0.0.1:21000 --node-listen-addr=127.0.0.1:11000 --raft-advertized-addr=127.0.0.1:21000
+
+cluster-node1: ./bin/coolbeans cluster-node --node-id bean1 --root-dir /tmp/bean1 --bootstrap-node-id bean0 --node-peer-addrs=:11000,:12000,:13000 --raft-listen-addr=127.0.0.1:22000 --node-listen-addr=127.0.0.1:12000 --raft-advertized-addr=127.0.0.1:22000
+
+cluster-node2: ./bin/coolbeans cluster-node --node-id bean2 --root-dir /tmp/bean2 --bootstrap-node-id bean0 --node-peer-addrs=:11000,:12000,:13000 --raft-listen-addr=127.0.0.1:23000 --node-listen-addr=127.0.0.1:13000 --raft-advertized-addr=127.0.0.1:23000
+
 beanstalkd-0:  ./bin/coolbeans   beanstalkd -l 127.0.0.1 -j 127.0.0.1:11000,127.0.0.1:12000,127.0.0.1:13000 -p 11300

@@ -157,6 +157,8 @@ func (s *Store) Open() error {
 	return nil
 }
 
+// BootstrapCluster attempts to do a one-time bootstrap of the cluster
+// the input is a map of nodeID & corresponding raft address entries
 func (s *Store) BootstrapCluster(nc map[string]string) error {
 	servers := make([]raft.Server, 0)
 	for id, addr := range nc {
@@ -165,21 +167,12 @@ func (s *Store) BootstrapCluster(nc map[string]string) error {
 			Address: raft.ServerAddress(addr),
 		})
 	}
-
-	configuration := raft.Configuration{
+	f := s.raft.BootstrapCluster(raft.Configuration{
 		Servers: servers,
-		// Servers: []raft.Server{
-		// 	{
-		// 		ID:      raft.ServerID(s.c.LocalNodeID),
-		// 		Address: s.transport.LocalAddr(),
-		// 	},
-		// },
+	})
+	if f.Error() != nil {
+		return f.Error()
 	}
-
-	for _, s := range configuration.Servers {
-		log.Infof("Id = %v, addr=%v", s.ID, s.Address)
-	}
-	s.raft.BootstrapCluster(configuration)
 	return nil
 }
 
