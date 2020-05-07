@@ -86,17 +86,17 @@ release/%: clean fmt protoc
 .PHONY: run-single
 run-single: build
 	$(GO) get github.com/mattn/goreman
-	$(GOREMAN) -f Procfiles/dev.procfile start
+	$(GOREMAN) -f deploy/dev.procfile start
 
 .PHONY: run-cluster
 run-cluster: build
 	$(GO) get github.com/mattn/goreman
-	$(GOREMAN) -f Procfiles/dev-cluster.procfile start
+	$(GOREMAN) -f deploy/dev-cluster.procfile start
 
 .PHONY: run-beanstalkd
 run-beanstalkd: build
 	$(GO) get github.com/mattn/goreman
-	$(GOREMAN) -f Procfiles/beanstalkd.procfile start
+	$(GOREMAN) -f deploy/beanstalkd.procfile start
 
 
 # test w/ race detector on always
@@ -132,10 +132,10 @@ docker-push: docker-build
 	$(DOCKER) push $(DOCKER_REPO):$(DOCKER_TAG)
 
 docker-compose-build:
-	$(DOCKER_COMPOSE) --file compose/docker-compose.yml --project-directory . build
+	$(DOCKER_COMPOSE) --file deploy/docker-compose.yml --project-directory . build --no-cache
 
 docker-compose-up:
-	$(DOCKER_COMPOSE) --file compose/docker-compose.yml --project-directory . up
+	$(DOCKER_COMPOSE) --file deploy/docker-compose.yml --project-directory . up --remove-orphans
 
 docker-compose-down:
-	$(DOCKER_COMPOSE) --file compose/docker-compose.yml --project-directory . down
+	$(DOCKER_COMPOSE) --file deploy/docker-compose.yml --project-directory . down
