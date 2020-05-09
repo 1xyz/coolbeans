@@ -15,7 +15,9 @@ import (
 	"google.golang.org/grpc/status"
 	"net"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -91,6 +93,29 @@ Raft options:
 	}
 }
 
+// waitForShutdown waits for a terminate or interrupt signal
+// terminates the server once a signal is received.
+func waitForShutdown(s *store.Store, c *ClusterNodeConfig, gs *grpc.Server) {
+	done := make(chan os.Signal, 1)
+	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+	<-done
+	log.Infof("Shutdown signal received")
+	shutdown(s, c, gs)
+}
+
+func shutdown(s *store.Store, c *ClusterNodeConfig, gs *grpc.Server) {
+	if err := s.TransferLeadership(); err != nil {
+		log.Errorf("shutdown: s.TransferLeadership: err=%v.", err)
+	}
+	if err := LeaveCluster(c, parsePeerAddrs(c.NodePeerAddrs)); err != nil {
+		log.Errorf("shutdown: LeaveCluster err = %v", err)
+	}
+	log.Infof("Execute a graceful stop to the grpc server")
+	if gs != nil {
+		gs.GracefulStop()
+	}
+}
+
 func RunCoolbeans(c *ClusterNodeConfig) error {
 	log.Infof("RunCoolbeans: creating directory for node=%v at %v", c.NodeId, c.RootDir)
 	if err := os.MkdirAll(c.RootDir, 0700); err != nil {
@@ -137,7 +162,13 @@ func RunCoolbeans(c *ClusterNodeConfig) error {
 	if err != nil {
 		return fmt.Errorf("RunCoolbeans: failed to listen: %w", err)
 	}
-	return grpcServer.Serve(lis)
+	go waitForShutdown(s, c, grpcServer)
+	if err := grpcServer.Serve(lis); err != nil {
+		log.Errorf("RunCoolbeans: grpcServer.Serve. err = %v", err)
+		shutdown(s, c, grpcServer)
+		return err
+	}
+	return nil
 }
 
 func BootstrapCluster(c *ClusterNodeConfig, s *store.Store, peerAddrs []string) error {
@@ -172,7 +203,7 @@ func CanBootstrapCluster(c *ClusterNodeConfig, peerAddrs []string) (bool, error)
 	}
 	for _, addr := range peerAddrs {
 		log.Infof("CanBootstrapCluster: Connect addr = %v", addr)
-		nodeCli, err := client.NewClusterNodeClient(addr, time.Duration(c.PeerTimeoutSecs)*time.Second, grpc.WithInsecure())
+		nodeCli, err := client.NewClusterNodeClient(addr, time.Duration(c.PeerTimeoutSecs)*time.Second)
 		if err != nil {
 			log.Errorf("CanBootstrapCluster: client.NewClusterNodeClient err %v", err)
 			nodeCli.Close()
@@ -209,11 +240,26 @@ func parsePeerAddrs(addr string) []string {
 	return peersAddrs
 }
 
+func LeaveCluster(c *ClusterNodeConfig, peerAddrs []string) error {
+	if len(peerAddrs) == 0 {
+		return fmt.Errorf("peerAddrs is empty")
+	}
+
+	nc, err := client.NewClusterNodeClientWithLB(peerAddrs,
+		time.Duration(c.PeerTimeoutSecs)*time.Second)
+	if err != nil {
+		return err
+	}
+
+	defer nc.Close()
+	return nc.LeaveCluster(c.NodeId)
+}
+
 func JoinCluster(c *ClusterNodeConfig, peerAddrs []string) error {
+	connTimeout := time.Duration(c.PeerTimeoutSecs) * time.Second
 	nodeClients := make([]*client.ClusterNodeClient, len(peerAddrs))
 	for i, addr := range peerAddrs {
-		if nc, err := client.NewClusterNodeClient(addr,
-			time.Duration(c.PeerTimeoutSecs)*time.Second, grpc.WithInsecure()); err != nil {
+		if nc, err := client.NewClusterNodeClient(addr, connTimeout); err != nil {
 			return fmt.Errorf("joinCluster: client.NewClusterNodeClient addr=%v %w", addr, err)
 		} else {
 			nodeClients[i] = nc
@@ -228,7 +274,7 @@ func JoinCluster(c *ClusterNodeConfig, peerAddrs []string) error {
 			break
 		}
 		for _, nc := range nodeClients {
-			log.Infof("Joincluster (attempt: %d): trying to connect to addr = %v ...", (i + 1), nc.HostAddr)
+			log.Infof("Joincluster (attempt: %d): trying to connect to addr = %v ...", (i + 1), nc.DispHostAddr)
 			err := nc.JoinCluster(c.NodeId, c.RaftListenAddr)
 			if err != nil {
 				st, ok := status.FromError(err)
@@ -237,7 +283,7 @@ func JoinCluster(c *ClusterNodeConfig, peerAddrs []string) error {
 					return err
 				}
 				if st.Code() == codes.Unavailable {
-					log.Warnf("JoinCluster: GRPC unavailable error failed at node addr=%v err=%v", nc.HostAddr, st.Message())
+					log.Warnf("JoinCluster: GRPC unavailable error failed at node addr=%v err=%v", nc.DispHostAddr, st.Message())
 					continue
 				}
 				if st.Code() == codes.FailedPrecondition && st.Message() == store.ErrNotRaftLeader.Error() {

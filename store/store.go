@@ -235,6 +235,15 @@ func (s *Store) Ready() bool {
 	return s.IsLeader()
 }
 
+func (s *Store) TransferLeadership() error {
+	if !s.IsLeader() {
+		log.Infof("ReleaseLeadership: current node is not leader")
+		return nil
+	}
+	f := s.raft.LeadershipTransfer()
+	return f.Error()
+}
+
 // Leave, allows a node (specified by nodeID_ to leave the cluster.
 //
 // It is required that the node that this is called into is a leader node.
@@ -669,7 +678,7 @@ func (f *fsm) ApplyTick(nowSecs int64) (*v1.TickResponse, error) {
 
 	// group the reservations by proxy id
 	proxyReservations := map[string]*v1.Reservations{}
-	logc.Infof("reservations == %v", len(rs))
+	logc.Debugf("reservations == %v", len(rs))
 	for _, r := range rs {
 		logc.Infof("r = %v", r)
 		v1r, err := toV1Reservation(r)

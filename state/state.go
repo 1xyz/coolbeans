@@ -317,6 +317,9 @@ type JSM interface {
 	// The response returns the ClientIDs (i) which are waiting for reservations, (ii) those which are not waiting and (iii)
 	// those which are missing or an error.
 	CheckClientState(clientIDs []ClientID) ([]ClientID, []ClientID, []ClientID, error)
+
+	// Close or stop this jobstatemachine
+	Stop() error
 }
 
 // JSMSnapshot provides methods allowing a caller to read & restore

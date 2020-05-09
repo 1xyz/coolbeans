@@ -104,6 +104,9 @@ func (c *cmdProcessor) Shutdown() {
 	c.shutdownCh <- true
 	close(c.shutdownCh)
 	close(c.newClientReqCh)
+	if err := c.jsm.Stop(); err != nil {
+		log.Errorf("cmdProcessor.Shutdown:  c.jsm.Stop() err = %v", err)
+	}
 }
 
 func (c *cmdProcessor) RegisterClient() *ClientReg {

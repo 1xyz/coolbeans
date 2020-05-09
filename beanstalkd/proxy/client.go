@@ -1,6 +1,7 @@
 package proxy
 
 import (
+	"errors"
 	"fmt"
 	v1 "github.com/1xyz/coolbeans/api/v1"
 	"github.com/1xyz/coolbeans/state"
@@ -71,7 +72,12 @@ func (c *Client) Open() error {
 
 	go func() {
 		for {
-			if err := c.GetReservations(c.doneCh); err != nil {
+			err := c.GetReservations(c.doneCh)
+			if err == ErrShutdown {
+				log.Infof("Done signaled leaving reservations loop")
+				return
+			}
+			if err != nil {
 				log.Errorf("proxy.client.Open: c.GetReservations: err = %v", err)
 				// ToDo: Consider using a exponential backoff strategy if c.getReservations fails.
 				// Refer: https://github.com/1xyz/coolbeans/issues/26
@@ -85,12 +91,12 @@ func (c *Client) Open() error {
 }
 
 func (c *Client) Close() error {
+	log.Infof("Client: close, signaling shutdown")
 	c.doneCh <- true
 	close(c.doneCh)
 	if c.conn != nil {
 		return c.conn.Close()
 	}
-
 	return nil
 }
 
@@ -271,6 +277,10 @@ func (c *Client) KickN(name state.TubeName, n int) (int, error) {
 	return int(resp.JobsKicked), err
 }
 
+func (c *Client) Stop() error {
+	return c.Close()
+}
+
 func (c *Client) Touch(nowSeconds int64, jobID state.JobID, clientID state.ClientID) error {
 	ctx, cancel := context.WithTimeout(context.Background(), c.ConnTimeout)
 	defer cancel()
@@ -435,8 +445,11 @@ func toClientIds(s []string) []state.ClientID {
 	return res
 }
 
+var ErrShutdown = errors.New("Done signaled")
+
 func (c *Client) GetReservations(done <-chan bool) error {
 	ctx := context.Background()
+	ctx.Done()
 	stream, err := c.jsmClient.StreamReserveUpdates(ctx,
 		&v1.ReserveUpdateRequest{ProxyId: c.ProxyID})
 	if err != nil {
@@ -447,8 +460,7 @@ func (c *Client) GetReservations(done <-chan bool) error {
 	for {
 		select {
 		case <-done:
-			log.Warnf("Done signalled")
-			return nil
+			return ErrShutdown
 		default:
 		}
 

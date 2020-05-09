@@ -271,6 +271,10 @@ func (jsm *localJSM) KickN(tubeName TubeName, n int) (int, error) {
 	return count, nil
 }
 
+func (jsm *localJSM) Stop() error {
+	return nil
+}
+
 func (jsm *localJSM) fromInitialToReady(job Job) error {
 	if job.State() != Initial {
 		return ErrInvalidJobTransition
@@ -578,7 +582,7 @@ func (jsm *localJSM) Tick(nowSecs int64) ([]*Reservation, error) {
 
 	res = append(res, jsm.tickClients(nowSecs)...)
 
-	log.Infof("reserved %v viaTick=%v viaDemand=%v",
+	log.Debugf("reserved %v viaTick=%v viaDemand=%v",
 		jsm.stat.nResv, jsm.stat.nResvOnTick, jsm.stat.nResvOnDemand)
 	return res, nil
 }
@@ -890,7 +894,7 @@ func (jsm *localJSM) tickClients(nowSecs int64) []*Reservation {
 		jsm.updateClientTickAt(cli)
 	}
 
-	logc.Infof("nClients processed = %v", count)
+	logc.Debugf("nClients processed = %v", count)
 	return result
 }
 
