@@ -157,6 +157,12 @@ func (s *Store) Open() error {
 	return nil
 }
 
+func (s *Store) Close() error {
+	log.Infof("store.Close: calling s.raft.Shutdown")
+	f := s.raft.Shutdown()
+	return f.Error()
+}
+
 // BootstrapCluster attempts to do a one-time bootstrap of the cluster
 // the input is a map of nodeID & corresponding raft address entries
 func (s *Store) BootstrapCluster(nc map[string]string) error {
@@ -240,6 +246,7 @@ func (s *Store) TransferLeadership() error {
 		log.Infof("ReleaseLeadership: current node is not leader")
 		return nil
 	}
+	log.Infof("store.TransferLeadership. attempt to transfer leader")
 	f := s.raft.LeadershipTransfer()
 	return f.Error()
 }

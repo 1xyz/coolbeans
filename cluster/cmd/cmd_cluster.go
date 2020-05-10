@@ -91,6 +91,7 @@ Raft options:
 	if err := RunCoolbeans(&cfg); err != nil {
 		log.Fatalf("cmdClusterNode: runCoolbeans: err = %v", err)
 	}
+	log.Infof("gracefully terminated")
 }
 
 // waitForShutdown waits for a terminate or interrupt signal
@@ -110,10 +111,12 @@ func shutdown(s *store.Store, c *ClusterNodeConfig, gs *grpc.Server) {
 	if err := LeaveCluster(c, parsePeerAddrs(c.NodePeerAddrs)); err != nil {
 		log.Errorf("shutdown: LeaveCluster err = %v", err)
 	}
-	log.Infof("Execute a graceful stop to the grpc server")
-	if gs != nil {
-		gs.GracefulStop()
+	if err := s.Close(); err != nil {
+		log.Errorf("shutdown: s.close(). err = %v", err)
 	}
+	log.Infof("shutdown: stop to the grpc server")
+	gs.Stop()
+	log.Infof("shutdown: complete")
 }
 
 func RunCoolbeans(c *ClusterNodeConfig) error {
@@ -244,7 +247,7 @@ func LeaveCluster(c *ClusterNodeConfig, peerAddrs []string) error {
 	if len(peerAddrs) == 0 {
 		return fmt.Errorf("peerAddrs is empty")
 	}
-
+	log.Infof("LeaveCluster: try to leave the cluster nodeId: %v", c.NodeId)
 	nc, err := client.NewClusterNodeClientWithLB(peerAddrs,
 		time.Duration(c.PeerTimeoutSecs)*time.Second)
 	if err != nil {
