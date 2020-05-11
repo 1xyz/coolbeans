@@ -469,6 +469,12 @@ func (f *fsm) Apply(l *raft.Log) interface{} {
 		rResp, err := f.ApplyReserve(applyReq.NowSecs, &rReq)
 		return newApplyRespBytes(rResp, err)
 
+	case v1.OpType_STATS_JOB_YAML:
+		var sReq v1.GetStatsJobYamlRequest
+		unmarshalP(applyReq.Body, &sReq)
+		sResp, err := f.ApplyStatsJobYaml(applyReq.NowSecs, &sReq)
+		return newApplyRespBytes(sResp, err)
+
 	case v1.OpType_TICK:
 		tResp, err := f.ApplyTick(applyReq.NowSecs)
 		return newApplyRespBytes(tResp, err)
@@ -672,6 +678,20 @@ func (f *fsm) ApplyReserve(nowSecs int64, req *v1.ReserveRequest) (*v1.ReserveRe
 
 	return &v1.ReserveResponse{
 		Reservation: v1r,
+	}, nil
+}
+
+func (f *fsm) ApplyStatsJobYaml(nowSecs int64, req *v1.GetStatsJobYamlRequest) (*v1.GetStatsJobYamlResponse, error) {
+	b, err := f.jsm.GetStatsJobAsYaml(nowSecs, state.JobID(req.JobId))
+	if err != nil {
+		log.Errorf("ApplyGetJobStatsYaml: f.jsm.GetStatsJobAsYaml nowSecs=%v, jobId=%v: err = %v",
+			nowSecs, req.JobId, err)
+		return nil, err
+	}
+	return &v1.GetStatsJobYamlResponse{
+		StatsYaml: &v1.StatsYaml{
+			Stats: b,
+		},
 	}, nil
 }
 

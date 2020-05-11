@@ -489,7 +489,14 @@ func (c *Client) Release(jobID state.JobID, clientID state.ClientID) error {
 }
 
 func (c *Client) GetStatsJobAsYaml(nowSeconds int64, jobID state.JobID) ([]byte, error) {
-	return nil, nil
+	ctx, cancel := context.WithTimeout(context.Background(), c.ConnTimeout)
+	defer cancel()
+	resp, err := c.jsmClient.GetStatsJobYaml(ctx, &v1.GetStatsJobYamlRequest{JobId: int64(jobID)})
+	if err != nil {
+		log.Errorf("GetStatsJobAsYaml: c.jsmClient.GetStatsJobYaml jobID=%v: err = %v", jobID, err)
+		return nil, err
+	}
+	return resp.StatsYaml.Stats, nil
 }
 
 func (c *Client) Snapshot() (state.JSMSnapshot, error) {

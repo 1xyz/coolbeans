@@ -159,6 +159,14 @@ func (j *JSMServer) Release(ctx context.Context, req *v1.ReleaseRequest) (*v1.Em
 
 	return &resp, nil
 }
+func (j *JSMServer) GetStatsJobYaml(ctx context.Context, req *v1.GetStatsJobYamlRequest) (*v1.GetStatsJobYamlResponse, error) {
+	var resp v1.GetStatsJobYamlResponse
+	if err := j.performApply(v1.OpType_STATS_JOB_YAML, req, &resp); err != nil {
+		log.Errorf("jsmServer.GetStatsJobYaml: performApply: err = %v", err)
+		return nil, err
+	}
+	return &resp, nil
+}
 
 func (j *JSMServer) Tick() (*v1.TickResponse, error) {
 	if !j.r.IsLeader() {
