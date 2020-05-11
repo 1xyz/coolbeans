@@ -166,6 +166,8 @@ func (c *cmdProcessor) processRequest(req *CmdRequest) {
 		c.reserve(cli, req)
 	case ReserveWithTimeout:
 		resp = c.reserveWithTimeout(cli, req)
+	case StatsJob:
+		resp = c.statsJob(cli, req)
 	case Touch:
 		resp = c.touch(cli, req)
 	case Use:
@@ -357,6 +359,29 @@ func (c *cmdProcessor) releaseWith(cli *client, req *CmdRequest) *CmdResponse {
 	}
 
 	return resp
+}
+
+func (c *cmdProcessor) statsJob(cli *client, req *CmdRequest) *CmdResponse {
+	resp := NewCmdResponseFromReq(req)
+	cmd, ok := req.cmd.(*idArg)
+	if !ok {
+		// Note: this is indicative of code-bug where the CmdType and cmd don't match up
+		log.Panicf("cmdProcessor.statsJob: cast-error, cannot cast to *idArg")
+	}
+
+	b, err := c.jsm.GetStatsJobAsYaml(nowSeconds(), cmd.id)
+	if err != nil {
+		resp.setResponse(MsgNotFound)
+		return resp
+	}
+
+	bLen := len(b) + 4 // 4 additional bytes for a header
+	s := fmt.Sprintf("OK %d", bLen)
+	sendCmdResponse(req.ID, cli, []byte(s), true /*hasMore*/)
+	hdr := "---"
+	sendCmdResponse(req.ID, cli, []byte(hdr), true)
+	sendCmdResponse(req.ID, cli, b, false)
+	return nil
 }
 
 func (c *cmdProcessor) touch(cli *client, req *CmdRequest) *CmdResponse {
@@ -554,6 +579,8 @@ func NewCmdRequest(cmdData *CmdData, clientID state.ClientID) (CmdRequest, error
 	case ReserveWithTimeout:
 		cmdRequest.cmd, err = NewReserveWithTimeoutArg(cmdData)
 	case Touch:
+		cmdRequest.cmd, err = NewIDArg(cmdData)
+	case StatsJob:
 		cmdRequest.cmd, err = NewIDArg(cmdData)
 	case Quit, Reserve, PeekReady, PeekDelayed, PeekBuried:
 	default:

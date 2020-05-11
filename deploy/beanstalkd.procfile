@@ -1,2 +1,2 @@
 # running beanstalkd as a single server 
-beanstalkd: ./bin/coolbeans beanstalkd -l 127.0.0.1 -p 11300
+beanstalkd: ./bin/coolbeans --verbose beanstalkd -l 127.0.0.1 -p 11300

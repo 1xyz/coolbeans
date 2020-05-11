@@ -488,6 +488,10 @@ func (c *Client) Release(jobID state.JobID, clientID state.ClientID) error {
 	return fmt.Errorf("Unimplemented")
 }
 
+func (c *Client) GetStatsJobAsYaml(nowSeconds int64, jobID state.JobID) ([]byte, error) {
+	return nil, nil
+}
+
 func (c *Client) Snapshot() (state.JSMSnapshot, error) {
 	return nil, fmt.Errorf("Unimplemented")
 }

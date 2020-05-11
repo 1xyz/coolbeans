@@ -3,6 +3,7 @@ package state
 import (
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
+	"gopkg.in/yaml.v2"
 	"math"
 	"time"
 )
@@ -269,6 +270,21 @@ func (jsm *localJSM) KickN(tubeName TubeName, n int) (int, error) {
 	}
 
 	return count, nil
+}
+
+func (jsm *localJSM) GetStatsJobAsYaml(nowSeconds int64, jobID JobID) ([]byte, error) {
+	e, err := jsm.jobs.Get(jobID)
+	if err != nil {
+		return nil, err
+	}
+
+	stats := GetStatistics(nowSeconds, e.job)
+	d, err := yaml.Marshal(&stats)
+	if err != nil {
+		log.Errorf("GetStatsJobAsYaml: yaml.Marshal jobID=%v err=%v", jobID, err)
+		return nil, err
+	}
+	return d, nil
 }
 
 func (jsm *localJSM) Stop() error {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/net/context"
+	"gopkg.in/yaml.v2"
 	"testing"
 	"time"
 )
@@ -576,6 +577,47 @@ func TestLocalJSM_CheckClientState(t *testing.T) {
 	assert.Equalf(t, []ClientID{cliIDs[2]}, missing, "expect cliIDs[1] to be in missing state")
 }
 
+func TestLocalJSM_GetStatsJobAsYaml(t *testing.T) {
+	jsm := newTestJsm(t)
+	tubeName := TubeName("garbanzo-beans")
+	tubes := []TubeName{tubeName}
+	j := putTestJob(t, jsm, tubes[0], true)
+
+	data, err := jsm.GetStatsJobAsYaml(testNowSecs(), j.ID())
+	assert.Nilf(t, err, "expect err to be nil")
+	assert.NotNilf(t, data, "expect bytes to be not nil")
+
+	// De-Serialize this Yaml => map
+	m := make(map[string]interface{})
+	err = yaml.Unmarshal([]byte(data), &m)
+	if err != nil {
+		t.Fatalf("error: %v", err)
+	}
+
+	assert.Equalf(t, map[string]interface{}{
+		"id":        1,
+		"tube":      string(tubeName),
+		"state":     "delayed",
+		"pri":       0x1,
+		"age":       0,
+		"delay":     defaultTestDelay,
+		"ttr":       defaultTestTTR,
+		"time-left": defaultTestDelay,
+		"file":      0,
+		"reserves":  0,
+		"timeouts":  0,
+		"releases":  0,
+		"buries":    0,
+		"kicks":     0,
+	}, m, "expect maps to match")
+}
+
+func TestLocalJSM_GetStatsJobAsYaml_NotFound(t *testing.T) {
+	jsm := newTestJsm(t)
+	_, err := jsm.GetStatsJobAsYaml(testNowSecs(), JobID(1334))
+	assert.Equalf(t, ErrEntryMissing, err, "expect err to be nil")
+}
+
 func TestLocalJSM_SnapshotReturnsNotNil(t *testing.T) {
 	snap, err := newTestJsm(t).Snapshot()
 	assert.Nilf(t, err, "expect err to be nil")
@@ -686,13 +728,19 @@ func createMixTestJobs(t *testing.T, tube TubeName, nReady, nDelayed, nReserved,
 	return jsm
 }
 
+const (
+	defaultTestPri   = uint32(1)
+	defaultTestTTR   = 2
+	defaultTestDelay = 10
+)
+
 func putTestJob(t *testing.T, jsm *localJSM, tubeName TubeName, hasDelay bool) Job {
-	pri := uint32(1)
-	ttr := 2
+	pri := defaultTestPri
+	ttr := defaultTestTTR
 	body := []byte("hello")
 	var delay int64 = 0
 	if hasDelay {
-		delay = 10
+		delay = defaultTestDelay
 	}
 
 	j, err := jsm.NewJob(testNowSecs(), pri, delay, ttr, len(body), body, tubeName)

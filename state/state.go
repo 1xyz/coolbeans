@@ -10,7 +10,9 @@ package state
 
 import (
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
+	"strings"
 )
 
 // JobState refers to the state of a job in beanstalkd context
@@ -222,6 +224,44 @@ func (j *localJob) BuriedAt() int64 {
 	return j.buriedAt
 }
 
+func GetStatistics(nowSecs int64, j Job) map[string]interface{} {
+	jobState := fmt.Sprintf("%s", j.State().String())
+	age := nowSecs - j.CreatedAt()
+	timeLeft := int64(0)
+	if j.State() == Delayed {
+		timeLeft = j.ReadyAt() - nowSecs
+		if timeLeft < 0 {
+			log.Errorf("GetStatistics: Delayed Job timeLeft=%v < 0. nowSecs = %v, ReadyAt = %v",
+				timeLeft, nowSecs, j.ReadyAt())
+			timeLeft = 0
+		}
+	}
+	if j.State() == Reserved {
+		timeLeft = j.ExpiresAt() - nowSecs
+		if timeLeft < 0 {
+			log.Errorf("GetStatistics: Reserved Job timeLeft=%v < 0. nowSecs = %v, ExpiresAt = %v",
+				timeLeft, nowSecs, j.ExpiresAt())
+			timeLeft = 0
+		}
+	}
+	return map[string]interface{}{
+		"id":        j.ID(),
+		"tube":      j.TubeName(),
+		"state":     strings.ToLower(jobState),
+		"pri":       j.Priority(),
+		"age":       age,
+		"delay":     j.Delay(),
+		"ttr":       j.TTR(),
+		"time-left": timeLeft,
+		"file":      0,
+		"reserves":  0,
+		"timeouts":  0,
+		"releases":  0,
+		"buries":    0,
+		"kicks":     0,
+	}
+}
+
 // JSM provides methods for the beanstalkd job state machine.
 // put with delay               release with delay
 //  ----------------> [DELAYED] <------------.
@@ -294,6 +334,32 @@ type JSM interface {
 
 	// Kick atmost n jobs from the specified tube to ready state
 	KickN(name TubeName, n int) (int, error)
+
+	// Retrieve the statistics of this job
+	// The stats-job data is a YAML byte slice representing a single dictionary of string
+	// keys to scalar values. It contains these keys:
+	// - "id" is the job id
+	// - "tube" is the name of the tube that contains this job
+	// - "state" is "ready" or "delayed" or "reserved" or "buried"
+	// - "pri" is the priority value set by the put, release, or bury commands.
+	// - "age" is the time in seconds since the put command that created this job.
+	// - "delay" is the integer number of seconds to wait before putting this job in
+	//   the ready queue.
+	// - "ttr" -- time to run -- is the integer number of seconds a worker is
+	//   allowed to run this job.
+	// - "time-left" is the number of seconds left until the server puts this job
+	//   into the ready queue. This number is only meaningful if the job is
+	//   reserved or delayed. If the job is reserved and this amount of time
+	//   elapses before its state changes, it is considered to have timed out.
+	// - "file" this will be 0.
+	// - "reserves" is the number of times this job has been reserved.
+	// - "timeouts" is the number of times this job has timed out during a
+	//   reservation.
+	// - "releases" is the number of times a client has released this job from a
+	//   reservation.
+	// - "buries" is the number of times this job has been buried.
+	// - "kicks" is the number of times this job has been kicked.
+	GetStatsJobAsYaml(nowSeconds int64, id JobID) ([]byte, error)
 
 	// Returns an interface that allows a caller to snapshot the current
 	// state of the JSM. Callers of the interface should not be done across
