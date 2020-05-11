@@ -111,6 +111,17 @@ type Job interface {
 	// Update the buriedAt value to the current clock
 	// Return back the new BuriedAt time
 	UpdateBuriedAt(nowSeconds int64) int64
+
+	ReserveCount() uint32
+	IncReserveCount()
+	TimeoutCount() uint32
+	IncTimeoutCount()
+	ReleaseCount() uint32
+	IncReleaseCount()
+	BuryCount() uint32
+	IncBuryCount()
+	KickCount() uint32
+	IncKickCount()
 }
 
 type localJob struct {
@@ -129,6 +140,12 @@ type localJob struct {
 	expiresAt  int64
 	reservedBy ClientID
 	buriedAt   int64
+
+	reserveCount uint32
+	timeoutCount uint32
+	releaseCount uint32
+	buryCount    uint32
+	kickCount    uint32
 }
 
 func (j *localJob) ID() JobID {
@@ -224,6 +241,37 @@ func (j *localJob) BuriedAt() int64 {
 	return j.buriedAt
 }
 
+func (j *localJob) ReserveCount() uint32 {
+	return j.reserveCount
+}
+func (j *localJob) IncReserveCount() {
+	j.reserveCount++
+}
+func (j *localJob) TimeoutCount() uint32 {
+	return j.timeoutCount
+}
+func (j *localJob) IncTimeoutCount() {
+	j.timeoutCount++
+}
+func (j *localJob) ReleaseCount() uint32 {
+	return j.releaseCount
+}
+func (j *localJob) IncReleaseCount() {
+	j.releaseCount++
+}
+func (j *localJob) BuryCount() uint32 {
+	return j.buryCount
+}
+func (j *localJob) IncBuryCount() {
+	j.buryCount++
+}
+func (j *localJob) KickCount() uint32 {
+	return j.kickCount
+}
+func (j *localJob) IncKickCount() {
+	j.kickCount++
+}
+
 func GetStatistics(nowSecs int64, j Job) map[string]interface{} {
 	jobState := fmt.Sprintf("%s", j.State().String())
 	age := nowSecs - j.CreatedAt()
@@ -254,11 +302,11 @@ func GetStatistics(nowSecs int64, j Job) map[string]interface{} {
 		"ttr":       j.TTR(),
 		"time-left": timeLeft,
 		"file":      0,
-		"reserves":  0,
-		"timeouts":  0,
-		"releases":  0,
-		"buries":    0,
-		"kicks":     0,
+		"reserves":  j.ReserveCount(),
+		"timeouts":  j.TimeoutCount(),
+		"releases":  j.ReleaseCount(),
+		"buries":    j.BuryCount(),
+		"kicks":     j.KickCount(),
 	}
 }
 

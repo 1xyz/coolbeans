@@ -373,7 +373,14 @@ func (jsm *localJSM) fromReservedToReady(jobID JobID, clientID ClientID, pri uin
 	}
 
 	if updatePri {
+		e.job.IncReleaseCount()
 		e.job.UpdatePriority(pri)
+	} else {
+		// this is a little hack. maybe can be addressed better
+		// updatePri is not issued by an explicit release call
+		// we use this as a way to determine whether the release
+		// happened via timeout or an explicit Release
+		e.job.IncTimeoutCount()
 	}
 
 	e.job.UpdateState(Ready)
@@ -410,6 +417,7 @@ func (jsm *localJSM) fromReservedToDelayed(nowSeconds int64, jobID JobID, client
 		return err
 	}
 	e.job.UpdateReservedBy("")
+	e.job.IncReleaseCount()
 	if je, err := jsm.tubes.EnqueueDelayedJob(e.job); err != nil {
 		return err
 	} else {
@@ -442,6 +450,7 @@ func (jsm *localJSM) fromReadyToReserved(nowSeconds int64, jobID JobID, clientID
 	}
 	e.job.UpdateState(Reserved)
 	e.job.UpdateReservedBy(clientID)
+	e.job.IncReserveCount()
 	if je, err := jsm.reservedJobs.Enqueue(clientID, e.job); err != nil {
 		return err
 	} else {
@@ -473,6 +482,7 @@ func (jsm *localJSM) fromReservedToBuried(nowSeconds int64, jobID JobID, priorit
 	e.job.UpdateBuriedAt(nowSeconds)
 	e.job.UpdateState(Buried)
 	e.job.UpdatePriority(priority)
+	e.job.IncBuryCount()
 	if je, err := jsm.tubes.EnqueueBuriedJob(e.job); err != nil {
 		return err
 	} else {
@@ -498,6 +508,7 @@ func (jsm *localJSM) fromBuriedToReady(jobID JobID) error {
 
 	e.job.ResetBuriedAt()
 	e.job.UpdateState(Ready)
+	e.job.IncKickCount()
 	if je, err := jsm.tubes.EnqueueReadyJob(e.job); err != nil {
 		return err
 	} else {

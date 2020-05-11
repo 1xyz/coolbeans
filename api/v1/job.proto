@@ -63,4 +63,19 @@ message JobProto {
 
     // buried_at the clock time when the job is buried
     int64 buried_at = 13;
+
+    //  reserve_count is the number of times this job has been reserved.
+    uint32 reserve_count = 14;
+
+    // timeoutCount is the number of times this job has timed out during a reservation.
+    uint32 timeout_count = 15;
+
+    // release_count is the number of times a client has released this job from a reservation.
+    uint32 release_count = 16;
+
+    //  bury_count is the number of times this job has been buried.
+    uint32 bury_count = 17;
+
+    // kick_count is the number of times this job has been kicked
+    uint32 kick_count = 18;
 }

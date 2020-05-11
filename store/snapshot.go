@@ -136,6 +136,12 @@ func JobToJobProto(j state.Job) *v1.JobProto {
 		BodySize:   int32(j.BodySize()),
 		Body:       j.Body(),
 		BuriedAt:   j.BuriedAt(),
+
+		ReserveCount: j.ReserveCount(),
+		TimeoutCount: j.TimeoutCount(),
+		ReleaseCount: j.ReleaseCount(),
+		BuryCount:    j.BuryCount(),
+		KickCount:    j.KickCount(),
 	}
 }
 
@@ -318,4 +324,34 @@ func (j *wrapJob) UpdateBuriedAt(nowSeconds int64) int64 {
 }
 func (j *wrapJob) BuriedAt() int64 {
 	return j.jp.BuriedAt
+}
+func (j *wrapJob) ReserveCount() uint32 {
+	return j.jp.GetReserveCount()
+}
+func (j *wrapJob) IncReserveCount() {
+	j.jp.ReserveCount++
+}
+func (j *wrapJob) TimeoutCount() uint32 {
+	return j.jp.GetTimeoutCount()
+}
+func (j *wrapJob) IncTimeoutCount() {
+	j.jp.TimeoutCount++
+}
+func (j *wrapJob) ReleaseCount() uint32 {
+	return j.jp.GetReleaseCount()
+}
+func (j *wrapJob) IncReleaseCount() {
+	j.jp.ReleaseCount++
+}
+func (j *wrapJob) BuryCount() uint32 {
+	return j.jp.GetBuryCount()
+}
+func (j *wrapJob) IncBuryCount() {
+	j.jp.BuryCount++
+}
+func (j *wrapJob) KickCount() uint32 {
+	return j.jp.GetKickCount()
+}
+func (j *wrapJob) IncKickCount() {
+	j.jp.KickCount++
 }
