@@ -361,6 +361,8 @@ func (c *cmdProcessor) releaseWith(cli *client, req *CmdRequest) *CmdResponse {
 	return resp
 }
 
+const statHdr = "---"
+
 func (c *cmdProcessor) statsJob(cli *client, req *CmdRequest) *CmdResponse {
 	resp := NewCmdResponseFromReq(req)
 	cmd, ok := req.cmd.(*idArg)
@@ -375,11 +377,10 @@ func (c *cmdProcessor) statsJob(cli *client, req *CmdRequest) *CmdResponse {
 		return resp
 	}
 
-	bLen := len(b) + 4 // 4 additional bytes for a header
+	bLen := len(b) + len(statHdr) + 1 // 4 additional bytes for a header & newlines
 	s := fmt.Sprintf("OK %d", bLen)
 	sendCmdResponse(req.ID, cli, []byte(s), true /*hasMore*/)
-	hdr := "---"
-	sendCmdResponse(req.ID, cli, []byte(hdr), true)
+	sendCmdResponse(req.ID, cli, []byte(statHdr), true)
 	sendCmdResponse(req.ID, cli, b, false)
 	return nil
 }
