@@ -615,7 +615,55 @@ func TestLocalJSM_GetStatsJobAsYaml(t *testing.T) {
 func TestLocalJSM_GetStatsJobAsYaml_NotFound(t *testing.T) {
 	jsm := newTestJsm(t)
 	_, err := jsm.GetStatsJobAsYaml(testNowSecs(), JobID(1334))
-	assert.Equalf(t, ErrEntryMissing, err, "expect err to be nil")
+	assert.Equalf(t, ErrEntryMissing, err, "expect err to be ErrEntryMissing")
+}
+
+func TestLocalJSM_GetStatsTubeAsYaml(t *testing.T) {
+	jsm := newTestJsm(t)
+	tubes := []TubeName{"foo"}
+	cliID := ClientID("client-123")
+	for i := 0; i < 3; i++ {
+		putTestJob(t, jsm, tubes[0], false)
+	}
+	for i := 0; i < 3; i++ {
+		putTestJob(t, jsm, tubes[0], true)
+	}
+	if r := createTestResv(t, jsm, cliID, tubes, 30); r.Status != Matched {
+		t.Fatalf("expect r.Status = %v to be Queued", r.Status)
+	}
+
+	data, err := jsm.GetStatsTubeAsYaml(testNowSecs(), tubes[0])
+	assert.Nilf(t, err, "expect err to be nil")
+	assert.NotNilf(t, data, "expect bytes to be not nil")
+
+	// De-Serialize this Yaml => map
+	m := make(map[string]interface{})
+	err = yaml.Unmarshal([]byte(data), &m)
+	if err != nil {
+		t.Fatalf("error: %v", err)
+	}
+	assert.Equalf(t, map[string]interface{}{
+		"cmd-delete":            0,
+		"cmd-pause-tube":        0,
+		"current-jobs-buried":   0,
+		"current-jobs-delayed":  3,
+		"current-jobs-ready":    2,
+		"current-jobs-reserved": 1,
+		"current-jobs-urgent":   0,
+		"current-using":         0,
+		"current-waiting":       0,
+		"current-watching":      0,
+		"name":                  string(tubes[0]),
+		"pause":                 0,
+		"pause-time-left":       0,
+		"total-jobs":            0,
+	}, m, "expect maps to match")
+}
+
+func TestLocalJSM_GetStatsTubeAsYaml_NotFound(t *testing.T) {
+	jsm := newTestJsm(t)
+	_, err := jsm.GetStatsTubeAsYaml(testNowSecs(), TubeName("foobar"))
+	assert.Equalf(t, ErrEntryMissing, err, "expect err to be ErrEntryMissing")
 }
 
 func TestLocalJSM_SnapshotReturnsNotNil(t *testing.T) {

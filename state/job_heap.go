@@ -21,6 +21,9 @@ type JobHeap interface {
 
 	// Peek returns the top element of the heap without dequeuing it
 	Peek() *JobEntry
+
+	// Return the number of jobs found in the specific tube
+	JobCountByTube(tubename TubeName) uint32
 }
 
 // JobEntry is an entry in the JobHeap
@@ -113,6 +116,16 @@ func (jh *jobHeap) Pop() interface{} {
 	item.index = -1 // for safety
 	jh.entries = old[0 : n-1]
 	return item
+}
+
+func (jh *jobHeap) JobCountByTube(tubeName TubeName) uint32 {
+	var count uint32 = 0
+	for _, e := range jh.entries {
+		if e.TubeName() == tubeName {
+			count++
+		}
+	}
+	return count
 }
 
 // PriorityJobs is a JobHeap, with jobs ordered by its

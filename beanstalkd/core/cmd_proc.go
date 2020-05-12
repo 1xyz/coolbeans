@@ -168,6 +168,8 @@ func (c *cmdProcessor) processRequest(req *CmdRequest) {
 		resp = c.reserveWithTimeout(cli, req)
 	case StatsJob:
 		resp = c.statsJob(cli, req)
+	case StatsTube:
+		resp = c.statsTube(cli, req)
 	case Touch:
 		resp = c.touch(cli, req)
 	case Use:
@@ -361,8 +363,6 @@ func (c *cmdProcessor) releaseWith(cli *client, req *CmdRequest) *CmdResponse {
 	return resp
 }
 
-const statHdr = "---"
-
 func (c *cmdProcessor) statsJob(cli *client, req *CmdRequest) *CmdResponse {
 	resp := NewCmdResponseFromReq(req)
 	cmd, ok := req.cmd.(*idArg)
@@ -377,12 +377,36 @@ func (c *cmdProcessor) statsJob(cli *client, req *CmdRequest) *CmdResponse {
 		return resp
 	}
 
+	sendStatResponse(b, req, cli)
+	return nil
+}
+
+func (c *cmdProcessor) statsTube(cli *client, req *CmdRequest) *CmdResponse {
+	resp := NewCmdResponseFromReq(req)
+	cmd, ok := req.cmd.(*tubeArg)
+	if !ok {
+		// Note: this is indicative of code-bug where the CmdType and cmd don't match up
+		log.Panicf("cmdProcessor.statsTube: cast-error, cannot cast to *tubeArg")
+	}
+
+	b, err := c.jsm.GetStatsTubeAsYaml(nowSeconds(), cmd.tubeName)
+	if err != nil {
+		resp.setResponse(MsgNotFound)
+		return resp
+	}
+
+	sendStatResponse(b, req, cli)
+	return nil
+}
+
+const statHdr = "---"
+
+func sendStatResponse(b []byte, req *CmdRequest, cli *client) {
 	bLen := len(b) + len(statHdr) + 1 // 4 additional bytes for a header & newlines
 	s := fmt.Sprintf("OK %d", bLen)
 	sendCmdResponse(req.ID, cli, []byte(s), true /*hasMore*/)
 	sendCmdResponse(req.ID, cli, []byte(statHdr), true)
 	sendCmdResponse(req.ID, cli, b, false)
-	return nil
 }
 
 func (c *cmdProcessor) touch(cli *client, req *CmdRequest) *CmdResponse {
@@ -583,6 +607,8 @@ func NewCmdRequest(cmdData *CmdData, clientID state.ClientID) (CmdRequest, error
 		cmdRequest.cmd, err = NewIDArg(cmdData)
 	case StatsJob:
 		cmdRequest.cmd, err = NewIDArg(cmdData)
+	case StatsTube:
+		cmdRequest.cmd, err = NewTubeArg(cmdData)
 	case Quit, Reserve, PeekReady, PeekDelayed, PeekBuried:
 	default:
 		err = ErrCmdNotFound

@@ -409,6 +409,30 @@ type JSM interface {
 	// - "kicks" is the number of times this job has been kicked.
 	GetStatsJobAsYaml(nowSeconds int64, id JobID) ([]byte, error)
 
+	// Retrieve tube statistics
+	//
+	// 	The stats-job data is a YAML byte slice representing a single dictionary of string
+	//	keys to scalar values. It contains these keys:
+	//  - "name" is the tube's name.
+	// - "current-jobs-ready" is the number of jobs in the ready queue in this tube.
+	// - "current-jobs-reserved" is the number of jobs reserved by all clients in this tube.
+	// - "current-jobs-delayed" is the number of delayed jobs in this tube.
+	// - "current-jobs-buried" is the number of buried jobs in this tube.
+	// - "current-waiting" is the number of open connections that have issued a
+	//   reserve command while watching this tube but not yet received a response.
+	//
+	// The following are not implemented but have placeholders for backward-compat:
+	// - "current-jobs-urgent" always zero
+	// - "total-jobs" is always zero
+	// - "current-using" is always zero
+	// - "current-watching" is the number of open connections that are currently
+	//   watching this tube.
+	// - "pause" is the number of seconds the tube has been paused for.
+	// - "cmd-delete" is the cumulative number of delete commands for this tube
+	// - "cmd-pause-tube" is the cumulative number of pause-tube commands for this tube.
+	// - "pause-time-left" is the number of seconds until the tube is un-paused.
+	GetStatsTubeAsYaml(nowSeconds int64, tubeName TubeName) ([]byte, error)
+
 	// Returns an interface that allows a caller to snapshot the current
 	// state of the JSM. Callers of the interface should not be done across
 	// go-routines.

@@ -499,6 +499,10 @@ func (c *Client) GetStatsJobAsYaml(nowSeconds int64, jobID state.JobID) ([]byte,
 	return resp.StatsYaml.Stats, nil
 }
 
+func (c *Client) GetStatsTubeAsYaml(nowSeconds int64, tubeName state.TubeName) ([]byte, error) {
+	return nil, nil
+}
+
 func (c *Client) Snapshot() (state.JSMSnapshot, error) {
 	return nil, fmt.Errorf("Unimplemented")
 }

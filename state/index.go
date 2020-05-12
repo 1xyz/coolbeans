@@ -246,6 +246,29 @@ func (ti tubeIndex) RemoveFromWaitQ(tubeName TubeName, cli *ClientResvEntry) err
 	}
 }
 
+func (ti tubeIndex) GetStatistics(tubeName TubeName) (map[string]interface{}, error) {
+	t, err := ti.getByName(tubeName, false /*create*/)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]interface{}{
+		"name":                  string(tubeName),
+		"current-jobs-urgent":   0,
+		"current-jobs-ready":    t.readyJobs.Len(),
+		"current-jobs-reserved": 0,
+		"current-jobs-delayed":  t.delayedJobs.Len(),
+		"current-jobs-buried":   t.buriedJobs.Len(),
+		"total-jobs":            0,
+		"current-using":         0,
+		"current-waiting":       t.waiting.Len(),
+		"current-watching":      0,
+		"pause":                 0,
+		"cmd-delete":            0,
+		"cmd-pause-tube":        0,
+		"pause-time-left":       0,
+	}, nil
+}
+
 // An map of jobs reserved where the key is the CliID
 type reservedJobsIndex map[ClientID]ReservedJobs
 
@@ -294,4 +317,12 @@ func (r reservedJobsIndex) NextReservedJob(clientID ClientID) (*JobEntry, error)
 	}
 
 	return r[clientID].Peek(), nil
+}
+
+func (r reservedJobsIndex) JobCount(tubeName TubeName) uint32 {
+	var count uint32 = 0
+	for _, rj := range r {
+		count += rj.JobCountByTube(tubeName)
+	}
+	return count
 }

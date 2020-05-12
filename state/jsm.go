@@ -277,14 +277,17 @@ func (jsm *localJSM) GetStatsJobAsYaml(nowSeconds int64, jobID JobID) ([]byte, e
 	if err != nil {
 		return nil, err
 	}
-
 	stats := GetStatistics(nowSeconds, e.job)
-	d, err := yaml.Marshal(&stats)
+	return yaml.Marshal(&stats)
+}
+
+func (jsm *localJSM) GetStatsTubeAsYaml(nowSecond int64, tubeName TubeName) ([]byte, error) {
+	stats, err := jsm.tubes.GetStatistics(tubeName)
 	if err != nil {
-		log.Errorf("GetStatsJobAsYaml: yaml.Marshal jobID=%v err=%v", jobID, err)
 		return nil, err
 	}
-	return d, nil
+	stats["current-jobs-reserved"] = jsm.reservedJobs.JobCount(tubeName)
+	return yaml.Marshal(&stats)
 }
 
 func (jsm *localJSM) Stop() error {
