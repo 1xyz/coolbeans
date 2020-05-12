@@ -500,7 +500,14 @@ func (c *Client) GetStatsJobAsYaml(nowSeconds int64, jobID state.JobID) ([]byte,
 }
 
 func (c *Client) GetStatsTubeAsYaml(nowSeconds int64, tubeName state.TubeName) ([]byte, error) {
-	return nil, nil
+	ctx, cancel := context.WithTimeout(context.Background(), c.ConnTimeout)
+	defer cancel()
+	resp, err := c.jsmClient.GetStatsTubeYaml(ctx, &v1.GetStatsTubeYamlRequest{TubeName: string(tubeName)})
+	if err != nil {
+		log.Errorf("GetStatsTubeYaml: c.jsmClient.GetStatsTubeYaml tubeName=%v: err = %v", tubeName, err)
+		return nil, err
+	}
+	return resp.StatsYaml.Stats, nil
 }
 
 func (c *Client) Snapshot() (state.JSMSnapshot, error) {

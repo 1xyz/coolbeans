@@ -475,6 +475,12 @@ func (f *fsm) Apply(l *raft.Log) interface{} {
 		sResp, err := f.ApplyStatsJobYaml(applyReq.NowSecs, &sReq)
 		return newApplyRespBytes(sResp, err)
 
+	case v1.OpType_STATS_TUBE_YAML:
+		var sReq v1.GetStatsTubeYamlRequest
+		unmarshalP(applyReq.Body, &sReq)
+		sResp, err := f.ApplyStatsTubeYaml(applyReq.NowSecs, &sReq)
+		return newApplyRespBytes(sResp, err)
+
 	case v1.OpType_TICK:
 		tResp, err := f.ApplyTick(applyReq.NowSecs)
 		return newApplyRespBytes(tResp, err)
@@ -689,6 +695,20 @@ func (f *fsm) ApplyStatsJobYaml(nowSecs int64, req *v1.GetStatsJobYamlRequest) (
 		return nil, err
 	}
 	return &v1.GetStatsJobYamlResponse{
+		StatsYaml: &v1.StatsYaml{
+			Stats: b,
+		},
+	}, nil
+}
+
+func (f *fsm) ApplyStatsTubeYaml(nowSecs int64, req *v1.GetStatsTubeYamlRequest) (*v1.GetStatsTubeYamlResponse, error) {
+	b, err := f.jsm.GetStatsTubeAsYaml(nowSecs, state.TubeName(req.TubeName))
+	if err != nil {
+		log.Errorf("GetStatsTubeAsYaml: f.jsm.GetStatsTubeAsYaml nowSecs=%v, tubeName=%v: err = %v",
+			nowSecs, req.TubeName, err)
+		return nil, err
+	}
+	return &v1.GetStatsTubeYamlResponse{
 		StatsYaml: &v1.StatsYaml{
 			Stats: b,
 		},
