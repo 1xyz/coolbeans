@@ -510,6 +510,17 @@ func (c *Client) GetStatsTubeAsYaml(nowSeconds int64, tubeName state.TubeName) (
 	return resp.StatsYaml.Stats, nil
 }
 
+func (c *Client) GetStatsAsYaml(nowSeconds int64) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), c.ConnTimeout)
+	defer cancel()
+	resp, err := c.jsmClient.GetStatsYaml(ctx, &v1.Empty{})
+	if err != nil {
+		log.Errorf("GetStatsAsYaml: c.jsmClient.GetStatsYaml: err = %v", err)
+		return nil, err
+	}
+	return resp.StatsYaml.Stats, nil
+}
+
 func (c *Client) Snapshot() (state.JSMSnapshot, error) {
 	return nil, fmt.Errorf("Unimplemented")
 }

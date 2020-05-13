@@ -67,11 +67,12 @@ func (jsm *localJSM) Put(nowSeconds int64,
 	bodySize int,
 	body []byte,
 	tubeName TubeName) (JobID, error) {
-
+	jsm.stat.nCmdPut++
 	newJob, err := jsm.NewJob(nowSeconds, priority, delay, ttr, bodySize, body, tubeName)
 	if err != nil {
 		return JobID(0), err
 	} else {
+		jsm.stat.nTotalJobs++
 		return newJob.ID(), nil
 	}
 }
@@ -83,7 +84,6 @@ func (jsm *localJSM) NewJob(nowSeconds int64,
 	bodySize int,
 	body []byte,
 	tubeName TubeName) (Job, error) {
-
 	newJob := &localJob{
 		id:        uint64(jsm.NextJobID()),
 		priority:  priority,
@@ -111,6 +111,7 @@ func (jsm *localJSM) NewJob(nowSeconds int64,
 }
 
 func (jsm *localJSM) GetJob(jobID JobID) (Job, error) {
+	jsm.stat.nCmdPeek++
 	e, err := jsm.jobs.Get(jobID)
 	if err != nil {
 		return nil, err
@@ -120,6 +121,7 @@ func (jsm *localJSM) GetJob(jobID JobID) (Job, error) {
 }
 
 func (jsm *localJSM) Delete(jobID JobID, clientID ClientID) error {
+	jsm.stat.nCmdDelete++
 	if e, err := jsm.jobs.Get(jobID); err != nil {
 		return err
 	} else {
@@ -160,10 +162,12 @@ func (jsm *localJSM) Delete(jobID JobID, clientID ClientID) error {
 }
 
 func (jsm *localJSM) PeekDelayedJob(tubeName TubeName) (Job, error) {
+	jsm.stat.nCmdPeekDelayed++
 	return jsm.tubes.NextDelayedJob(tubeName)
 }
 
 func (jsm *localJSM) PeekReadyJob(tubeName TubeName) (Job, error) {
+	jsm.stat.nCmdPeekReady++
 	return jsm.tubes.NextReadyJob(tubeName)
 }
 
@@ -172,6 +176,7 @@ func (jsm *localJSM) NextReservedJob(clientID ClientID) (Job, error) {
 }
 
 func (jsm *localJSM) PeekBuriedJob(tubeName TubeName) (Job, error) {
+	jsm.stat.nCmdPeekBuried++
 	return jsm.tubes.NextBuriedJob(tubeName)
 }
 
@@ -185,12 +190,15 @@ func (jsm *localJSM) Reserve(nowSeconds int64, jobID JobID, clientID ClientID) e
 }
 
 // Release this job to the ready state (from a reserved to ready state)
+// This method is called on timeout releases
 func (jsm *localJSM) Release(jobID JobID, clientID ClientID) error {
+	jsm.stat.nJobTimeouts++
 	return jsm.fromReservedToReady(jobID, clientID, 0, false /*updatePri*/)
 }
 
 // ReleaseWith transitions this reserved job to a Ready or Delayed state with a modified priority
 func (jsm *localJSM) ReleaseWith(nowSeconds int64, jobID JobID, clientID ClientID, pri uint32, delay int64) error {
+	jsm.stat.nCmdRelease++
 	if delay == 0 {
 		return jsm.fromReservedToReady(jobID, clientID, pri, true /*updatePri*/)
 	}
@@ -200,6 +208,7 @@ func (jsm *localJSM) ReleaseWith(nowSeconds int64, jobID JobID, clientID ClientI
 
 // Update this jobs TTR
 func (jsm *localJSM) Touch(nowSeconds int64, jobID JobID, clientID ClientID) error {
+	jsm.stat.nCmdTouch++
 	e, err := jsm.jobs.Get(jobID)
 	if err != nil {
 		return err
@@ -240,16 +249,19 @@ func (jsm *localJSM) Touch(nowSeconds int64, jobID JobID, clientID ClientID) err
 
 // Bury this job (from a reserved state)
 func (jsm *localJSM) Bury(nowSeconds int64, jobID JobID, priority uint32, clientID ClientID) error {
+	jsm.stat.nCmdBury++
 	return jsm.fromReservedToBuried(nowSeconds, jobID, priority, clientID)
 }
 
 // Kick this job from the buried state to a ready state
 func (jsm *localJSM) Kick(jobID JobID) error {
+	jsm.stat.nCmdKick++
 	return jsm.fromBuriedToReady(jobID)
 }
 
 // Kick atmost n jobs from the buried state to a ready state
 func (jsm *localJSM) KickN(tubeName TubeName, n int) (int, error) {
+	jsm.stat.nCmdKickN++
 	var count = 0
 	for i := 0; i < n; i++ {
 		j, err := jsm.PeekBuriedJob(tubeName)
@@ -273,6 +285,7 @@ func (jsm *localJSM) KickN(tubeName TubeName, n int) (int, error) {
 }
 
 func (jsm *localJSM) GetStatsJobAsYaml(nowSeconds int64, jobID JobID) ([]byte, error) {
+	jsm.stat.nCmdStatsJob++
 	e, err := jsm.jobs.Get(jobID)
 	if err != nil {
 		return nil, err
@@ -282,11 +295,49 @@ func (jsm *localJSM) GetStatsJobAsYaml(nowSeconds int64, jobID JobID) ([]byte, e
 }
 
 func (jsm *localJSM) GetStatsTubeAsYaml(nowSecond int64, tubeName TubeName) ([]byte, error) {
+	jsm.stat.nCmdStatsTube++
 	stats, err := jsm.tubes.GetStatistics(tubeName)
 	if err != nil {
 		return nil, err
 	}
 	stats["current-jobs-reserved"] = jsm.reservedJobs.JobCount(tubeName)
+	return yaml.Marshal(&stats)
+}
+
+func (jsm *localJSM) GetStatsAsYaml(nowSeconds int64) ([]byte, error) {
+	s := jsm.stat
+	stats := map[string]interface{}{
+		// use, watch & ignore are not tracked in JSM
+		"cmd-use":    0,
+		"cmd-watch":  0,
+		"cmd-ignore": 0,
+
+		"cmd-put":                  s.nCmdPut,
+		"cmd-peek":                 s.nCmdPeek,
+		"cmd-peek-ready":           s.nCmdPeekReady,
+		"cmd-peek-delayed":         s.nCmdPeekDelayed,
+		"cmd-peek-buried":          s.nCmdPeekBuried,
+		"cmd-reserve":              s.nCmdReserved,
+		"cmd-reserve-with-timeout": s.nCmdReservedWithTimeout,
+		"cmd-delete":               s.nCmdDelete,
+		"cmd-release":              s.nCmdRelease,
+		"cmd-bury":                 s.nCmdBury,
+		"cmd-kick":                 s.nCmdKick,
+		"cmd-touch":                s.nCmdTouch,
+		"cmd-stats":                s.nCmdStats,
+		"cmd-stats-job":            s.nCmdStatsJob,
+		"cmd-stats-tube":           s.nCmdStatsTube,
+		"cmd-list-tubes":           s.nCmdListTubes,
+		"cmd-list-tube-used":       s.nCmdListTubesUsed,
+		"cmd-list-tubes-watched":   s.nCmdListTubesWatched,
+		"cmd-pause-tube":           s.nCmdPauseTube,
+		"job-timeouts":             s.nJobTimeouts,
+		"total-jobs":               s.nTotalJobs,
+	}
+	for k, v := range jsm.tubes.TotalJobCounts() {
+		stats[k] = v
+	}
+	stats["current-jobs-reserved"] = jsm.reservedJobs.TotalJobs()
 	return yaml.Marshal(&stats)
 }
 
@@ -523,9 +574,15 @@ func (jsm *localJSM) fromBuriedToReady(jobID JobID) error {
 const maxTimeoutSecs = 24 * 3600
 
 func (jsm *localJSM) AppendReservation(clientId ClientID, reqID string, watchedTubes []TubeName, nowSecs, resvDeadlineAt int64) (*Reservation, error) {
-	if resvDeadlineAt < nowSecs || resvDeadlineAt > nowSecs+maxTimeoutSecs {
+	maxTimeLimit := nowSecs + maxTimeoutSecs
+	if resvDeadlineAt < nowSecs || resvDeadlineAt > maxTimeLimit {
 		// reservation timeout of infinity is not accepted
 		return nil, ErrInvalidResvTimeout
+	}
+	if resvDeadlineAt == maxTimeLimit {
+		jsm.stat.nCmdReserved++
+	} else {
+		jsm.stat.nCmdReservedWithTimeout++
 	}
 
 	logc := log.WithFields(log.Fields{
@@ -1082,7 +1139,35 @@ func (l *localSnapshot) FinalizeRestore() {
 }
 
 type procStats struct {
-	nResv         int64 // count of reservations
+	nResv         int64 // count of reservations issued
 	nResvOnDemand int64 // count of reservations via reserve method
 	nResvOnTick   int64 // count of reservation via tick
+
+	// CommandSpecific Counts
+	nCmdBury                uint64
+	nCmdDelete              uint64
+	nCmdGetJob              uint64
+	nCmdIgnore              uint64
+	nCmdKick                uint64
+	nCmdKickN               uint64
+	nCmdListTubes           uint64
+	nCmdListTubesUsed       uint64
+	nCmdListTubesWatched    uint64
+	nCmdPauseTube           uint64
+	nCmdPut                 uint64
+	nCmdPeek                uint64
+	nCmdPeekReady           uint64
+	nCmdPeekDelayed         uint64
+	nCmdPeekBuried          uint64
+	nCmdRelease             uint64
+	nCmdReserved            uint64
+	nCmdReservedWithTimeout uint64
+	nCmdStats               uint64
+	nCmdStatsJob            uint64
+	nCmdStatsTube           uint64
+	nCmdTouch               uint64
+	nCmdWatch               uint64
+
+	nJobTimeouts uint64 // Cumulative count of times a job has timed out
+	nTotalJobs   uint64 // cumulative count of jobs created
 }

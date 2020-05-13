@@ -178,6 +178,15 @@ func (j *JSMServer) GetStatsTubeYaml(ctx context.Context, req *v1.GetStatsTubeYa
 	return &resp, nil
 }
 
+func (j *JSMServer) GetStatsYaml(ctx context.Context, req *v1.Empty) (*v1.GetStatsYamlResponse, error) {
+	var resp v1.GetStatsYamlResponse
+	if err := j.performApply(v1.OpType_STATS_YAML, req, &resp); err != nil {
+		log.Errorf("jsmServer.GetStatsYaml: performApply: err = %v", err)
+		return nil, err
+	}
+	return &resp, nil
+}
+
 func (j *JSMServer) Tick() (*v1.TickResponse, error) {
 	if !j.r.IsLeader() {
 		return nil, ErrNotLeader

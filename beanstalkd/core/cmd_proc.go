@@ -170,6 +170,8 @@ func (c *cmdProcessor) processRequest(req *CmdRequest) {
 		resp = c.statsJob(cli, req)
 	case StatsTube:
 		resp = c.statsTube(cli, req)
+	case Stats:
+		resp = c.stats(cli, req)
 	case Touch:
 		resp = c.touch(cli, req)
 	case Use:
@@ -331,6 +333,15 @@ func (c *cmdProcessor) callPeekFunc(pf peekTube, cli *client, req *CmdRequest) *
 	return replyPeek(j, err, cli, req)
 }
 
+type processFunc func(*client, *CmdRequest) *CmdResponse
+
+func peekTubeFunc(pf peekTube) processFunc {
+	return func(cli *client, req *CmdRequest) *CmdResponse {
+		j, err := pf(cli.useTube)
+		return replyPeek(j, err, cli, req)
+	}
+}
+
 func replyPeek(j state.Job, err error, cli *client, req *CmdRequest) *CmdResponse {
 	if err != nil {
 		log.Errorf("cmdProcessor.replyPeek: err=%v", err)
@@ -390,6 +401,18 @@ func (c *cmdProcessor) statsTube(cli *client, req *CmdRequest) *CmdResponse {
 	}
 
 	b, err := c.jsm.GetStatsTubeAsYaml(nowSeconds(), cmd.tubeName)
+	if err != nil {
+		resp.setResponse(MsgNotFound)
+		return resp
+	}
+
+	sendStatResponse(b, req, cli)
+	return nil
+}
+
+func (c *cmdProcessor) stats(cli *client, req *CmdRequest) *CmdResponse {
+	resp := NewCmdResponseFromReq(req)
+	b, err := c.jsm.GetStatsAsYaml(nowSeconds())
 	if err != nil {
 		resp.setResponse(MsgNotFound)
 		return resp
@@ -609,7 +632,7 @@ func NewCmdRequest(cmdData *CmdData, clientID state.ClientID) (CmdRequest, error
 		cmdRequest.cmd, err = NewIDArg(cmdData)
 	case StatsTube:
 		cmdRequest.cmd, err = NewTubeArg(cmdData)
-	case Quit, Reserve, PeekReady, PeekDelayed, PeekBuried:
+	case Quit, Reserve, PeekReady, PeekDelayed, PeekBuried, Stats:
 	default:
 		err = ErrCmdNotFound
 	}

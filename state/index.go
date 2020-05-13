@@ -269,6 +269,22 @@ func (ti tubeIndex) GetStatistics(tubeName TubeName) (map[string]interface{}, er
 	}, nil
 }
 
+func (ti tubeIndex) TotalJobCounts() map[string]uint64 {
+	s := map[string]uint64{
+		"current-jobs-urgent":   0,
+		"current-jobs-ready":    0,
+		"current-jobs-reserved": 0,
+		"current-jobs-delayed":  0,
+		"current-jobs-buried":   0,
+	}
+	for _, t := range ti {
+		s["current-jobs-ready"] += uint64(t.readyJobs.Len())
+		s["current-jobs-delayed"] += uint64(t.delayedJobs.Len())
+		s["current-jobs-buried"] += uint64(t.buriedJobs.Len())
+	}
+	return s
+}
+
 // An map of jobs reserved where the key is the CliID
 type reservedJobsIndex map[ClientID]ReservedJobs
 
@@ -319,10 +335,18 @@ func (r reservedJobsIndex) NextReservedJob(clientID ClientID) (*JobEntry, error)
 	return r[clientID].Peek(), nil
 }
 
-func (r reservedJobsIndex) JobCount(tubeName TubeName) uint32 {
-	var count uint32 = 0
+func (r reservedJobsIndex) JobCount(tubeName TubeName) uint64 {
+	var count uint64 = 0
 	for _, rj := range r {
 		count += rj.JobCountByTube(tubeName)
+	}
+	return count
+}
+
+func (r reservedJobsIndex) TotalJobs() uint64 {
+	var count uint64 = 0
+	for _, rj := range r {
+		count += uint64(rj.Len())
 	}
 	return count
 }

@@ -433,6 +433,9 @@ type JSM interface {
 	// - "pause-time-left" is the number of seconds until the tube is un-paused.
 	GetStatsTubeAsYaml(nowSeconds int64, tubeName TubeName) ([]byte, error)
 
+	// Retrieve overall statistics
+	GetStatsAsYaml(nowSeconds int64) ([]byte, error)
+
 	// Returns an interface that allows a caller to snapshot the current
 	// state of the JSM. Callers of the interface should not be done across
 	// go-routines.

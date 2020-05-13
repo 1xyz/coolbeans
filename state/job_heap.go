@@ -23,7 +23,7 @@ type JobHeap interface {
 	Peek() *JobEntry
 
 	// Return the number of jobs found in the specific tube
-	JobCountByTube(tubename TubeName) uint32
+	JobCountByTube(tubename TubeName) uint64
 }
 
 // JobEntry is an entry in the JobHeap
@@ -118,8 +118,8 @@ func (jh *jobHeap) Pop() interface{} {
 	return item
 }
 
-func (jh *jobHeap) JobCountByTube(tubeName TubeName) uint32 {
-	var count uint32 = 0
+func (jh *jobHeap) JobCountByTube(tubeName TubeName) uint64 {
+	var count uint64 = 0
 	for _, e := range jh.entries {
 		if e.TubeName() == tubeName {
 			count++

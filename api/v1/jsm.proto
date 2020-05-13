@@ -60,6 +60,9 @@ service JobStateMachine {
 
     // Retrieve a tube's statistics
     rpc GetStatsTubeYaml(GetStatsTubeYamlRequest) returns (GetStatsTubeYamlResponse) {}
+
+    // Retrieve overall statistics
+    rpc GetStatsYaml(Empty) returns (GetStatsYamlResponse) {}
 }
 
 message PutRequest {
@@ -312,6 +315,11 @@ message GetStatsTubeYamlResponse {
     StatsYaml stats_yaml = 1;
 }
 
+message GetStatsYamlResponse {
+    // Yaml representation stats (key-value pairs)
+    StatsYaml stats_yaml = 1;
+}
+
 ////////////////////////////////////////////////////////////////////////
 
 // Encapsulates a snap of the entire system
@@ -365,6 +373,7 @@ enum OpType {
     PEEK_DELAYED = 14;
     STATS_JOB_YAML = 15;
     STATS_TUBE_YAML = 16;
+    STATS_YAML = 17;
 }
 
 // C & P from GRPC error codes

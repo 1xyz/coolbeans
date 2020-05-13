@@ -481,6 +481,12 @@ func (f *fsm) Apply(l *raft.Log) interface{} {
 		sResp, err := f.ApplyStatsTubeYaml(applyReq.NowSecs, &sReq)
 		return newApplyRespBytes(sResp, err)
 
+	case v1.OpType_STATS_YAML:
+		var eReq v1.Empty
+		unmarshalP(applyReq.Body, &eReq)
+		sResp, err := f.ApplyStatsYaml(applyReq.NowSecs, &eReq)
+		return newApplyRespBytes(sResp, err)
+
 	case v1.OpType_TICK:
 		tResp, err := f.ApplyTick(applyReq.NowSecs)
 		return newApplyRespBytes(tResp, err)
@@ -690,7 +696,7 @@ func (f *fsm) ApplyReserve(nowSecs int64, req *v1.ReserveRequest) (*v1.ReserveRe
 func (f *fsm) ApplyStatsJobYaml(nowSecs int64, req *v1.GetStatsJobYamlRequest) (*v1.GetStatsJobYamlResponse, error) {
 	b, err := f.jsm.GetStatsJobAsYaml(nowSecs, state.JobID(req.JobId))
 	if err != nil {
-		log.Errorf("ApplyGetJobStatsYaml: f.jsm.GetStatsJobAsYaml nowSecs=%v, jobId=%v: err = %v",
+		log.Errorf("ApplyStatsJobYaml: f.jsm.GetStatsJobAsYaml nowSecs=%v, jobId=%v: err = %v",
 			nowSecs, req.JobId, err)
 		return nil, err
 	}
@@ -704,11 +710,24 @@ func (f *fsm) ApplyStatsJobYaml(nowSecs int64, req *v1.GetStatsJobYamlRequest) (
 func (f *fsm) ApplyStatsTubeYaml(nowSecs int64, req *v1.GetStatsTubeYamlRequest) (*v1.GetStatsTubeYamlResponse, error) {
 	b, err := f.jsm.GetStatsTubeAsYaml(nowSecs, state.TubeName(req.TubeName))
 	if err != nil {
-		log.Errorf("GetStatsTubeAsYaml: f.jsm.GetStatsTubeAsYaml nowSecs=%v, tubeName=%v: err = %v",
+		log.Errorf("ApplyStatsTubeYaml: f.jsm.GetStatsTubeAsYaml nowSecs=%v, tubeName=%v: err = %v",
 			nowSecs, req.TubeName, err)
 		return nil, err
 	}
 	return &v1.GetStatsTubeYamlResponse{
+		StatsYaml: &v1.StatsYaml{
+			Stats: b,
+		},
+	}, nil
+}
+
+func (f *fsm) ApplyStatsYaml(nowSecs int64, req *v1.Empty) (*v1.GetStatsYamlResponse, error) {
+	b, err := f.jsm.GetStatsAsYaml(nowSecs)
+	if err != nil {
+		log.Errorf("ApplyStatsYaml: f.jsm.GetStatsAsYaml nowSecs=%v, err = %v", nowSecs, err)
+		return nil, err
+	}
+	return &v1.GetStatsYamlResponse{
 		StatsYaml: &v1.StatsYaml{
 			Stats: b,
 		},
