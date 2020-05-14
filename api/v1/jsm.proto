@@ -63,6 +63,9 @@ service JobStateMachine {
 
     // Retrieve overall statistics
     rpc GetStatsYaml(Empty) returns (GetStatsYamlResponse) {}
+
+    // Retreive a list of all Tubes
+    rpc ListTubes(Empty) returns (ListTubesResponse) {}
 }
 
 message PutRequest {
@@ -290,11 +293,6 @@ message PeekResponse {
     JobProto job = 1;
 }
 
-message StatsYaml {
-    // A byte representation of the stats
-    bytes stats = 1;
-}
-
 message GetStatsJobYamlRequest {
     // Id of the job to get
     int64 job_id = 1;
@@ -302,7 +300,7 @@ message GetStatsJobYamlRequest {
 
 message GetStatsJobYamlResponse {
     // Yaml representation stats (key-value pairs)
-    StatsYaml stats_yaml = 1;
+    bytes stats_yaml = 1;
 }
 
 message GetStatsTubeYamlRequest {
@@ -312,12 +310,16 @@ message GetStatsTubeYamlRequest {
 
 message GetStatsTubeYamlResponse {
     // Yaml representation stats (key-value pairs)
-    StatsYaml stats_yaml = 1;
+    bytes stats_yaml = 1;
 }
 
 message GetStatsYamlResponse {
     // Yaml representation stats (key-value pairs)
-    StatsYaml stats_yaml = 1;
+    bytes stats_yaml = 1;
+}
+
+message ListTubesResponse {
+    repeated string tubes = 1;
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -374,6 +376,7 @@ enum OpType {
     STATS_JOB_YAML = 15;
     STATS_TUBE_YAML = 16;
     STATS_YAML = 17;
+    LIST_TUBES = 18;
 }
 
 // C & P from GRPC error codes

@@ -123,6 +123,16 @@ func (j *JSMServer) KickN(ctx context.Context, req *v1.KickNRequest) (*v1.KickNR
 	return &resp, nil
 }
 
+func (j *JSMServer) ListTubes(ctx context.Context, req *v1.Empty) (*v1.ListTubesResponse, error) {
+	var resp v1.ListTubesResponse
+	if err := j.performApply(v1.OpType_LIST_TUBES, req, &resp); err != nil {
+		log.Errorf("jsmServer.ListTubes: performApply. Err=%v", err)
+		return nil, err
+	}
+
+	return &resp, nil
+}
+
 func (j *JSMServer) Put(ctx context.Context, req *v1.PutRequest) (*v1.PutResponse, error) {
 	t := time.Now()
 

@@ -427,6 +427,10 @@ func (f *fsm) Apply(l *raft.Log) interface{} {
 		kResp, err := f.ApplyKickN(&knReq)
 		return newApplyRespBytes(kResp, err)
 
+	case v1.OpType_LIST_TUBES:
+		lresp, err := f.ApplyListTubes()
+		return newApplyRespBytes(lresp, err)
+
 	case v1.OpType_PEEK_BURIED:
 		var pReq v1.PeekRequest
 		unmarshalP(applyReq.Body, &pReq)
@@ -643,6 +647,20 @@ func (f *fsm) ApplyKickN(req *v1.KickNRequest) (*v1.KickNResponse, error) {
 	}, nil
 }
 
+func (f *fsm) ApplyListTubes() (*v1.ListTubesResponse, error) {
+	tubes, err := f.jsm.GetTubes()
+	if err != nil {
+		return nil, err
+	}
+	ts := make([]string, len(tubes))
+	for i, t := range tubes {
+		ts[i] = string(t)
+	}
+	return &v1.ListTubesResponse{
+		Tubes: ts,
+	}, nil
+}
+
 func (f *fsm) ApplyRelease(nowSecs int64, req *v1.ReleaseRequest) (*v1.Empty, error) {
 	cu := NewClientURI(req.ProxyId, req.ClientId)
 	cu, err := newClientUri(req)
@@ -701,9 +719,7 @@ func (f *fsm) ApplyStatsJobYaml(nowSecs int64, req *v1.GetStatsJobYamlRequest) (
 		return nil, err
 	}
 	return &v1.GetStatsJobYamlResponse{
-		StatsYaml: &v1.StatsYaml{
-			Stats: b,
-		},
+		StatsYaml: b,
 	}, nil
 }
 
@@ -715,9 +731,7 @@ func (f *fsm) ApplyStatsTubeYaml(nowSecs int64, req *v1.GetStatsTubeYamlRequest)
 		return nil, err
 	}
 	return &v1.GetStatsTubeYamlResponse{
-		StatsYaml: &v1.StatsYaml{
-			Stats: b,
-		},
+		StatsYaml: b,
 	}, nil
 }
 
@@ -728,9 +742,7 @@ func (f *fsm) ApplyStatsYaml(nowSecs int64, req *v1.Empty) (*v1.GetStatsYamlResp
 		return nil, err
 	}
 	return &v1.GetStatsYamlResponse{
-		StatsYaml: &v1.StatsYaml{
-			Stats: b,
-		},
+		StatsYaml: b,
 	}, nil
 }
 

@@ -496,7 +496,7 @@ func (c *Client) GetStatsJobAsYaml(nowSeconds int64, jobID state.JobID) ([]byte,
 		log.Errorf("GetStatsJobAsYaml: c.jsmClient.GetStatsJobYaml jobID=%v: err = %v", jobID, err)
 		return nil, err
 	}
-	return resp.StatsYaml.Stats, nil
+	return resp.StatsYaml, nil
 }
 
 func (c *Client) GetStatsTubeAsYaml(nowSeconds int64, tubeName state.TubeName) ([]byte, error) {
@@ -507,7 +507,7 @@ func (c *Client) GetStatsTubeAsYaml(nowSeconds int64, tubeName state.TubeName) (
 		log.Errorf("GetStatsTubeYaml: c.jsmClient.GetStatsTubeYaml tubeName=%v: err = %v", tubeName, err)
 		return nil, err
 	}
-	return resp.StatsYaml.Stats, nil
+	return resp.StatsYaml, nil
 }
 
 func (c *Client) GetStatsAsYaml(nowSeconds int64) ([]byte, error) {
@@ -518,11 +518,22 @@ func (c *Client) GetStatsAsYaml(nowSeconds int64) ([]byte, error) {
 		log.Errorf("GetStatsAsYaml: c.jsmClient.GetStatsYaml: err = %v", err)
 		return nil, err
 	}
-	return resp.StatsYaml.Stats, nil
+	return resp.StatsYaml, nil
 }
 
 func (c *Client) GetTubes() ([]state.TubeName, error) {
-	return nil, nil
+	ctx, cancel := context.WithTimeout(context.Background(), c.ConnTimeout)
+	defer cancel()
+	resp, err := c.jsmClient.ListTubes(ctx, &v1.Empty{})
+	if err != nil {
+		log.Errorf("GetTubes: c.jsmClient.ListTubes: err = %v", err)
+		return nil, err
+	}
+	tubes := make([]state.TubeName, len(resp.Tubes))
+	for i, t := range resp.Tubes {
+		tubes[i] = state.TubeName(t)
+	}
+	return tubes, nil
 }
 
 func (c *Client) Snapshot() (state.JSMSnapshot, error) {
