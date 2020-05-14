@@ -521,6 +521,10 @@ func (c *Client) GetStatsAsYaml(nowSeconds int64) ([]byte, error) {
 	return resp.StatsYaml.Stats, nil
 }
 
+func (c *Client) GetTubes() ([]state.TubeName, error) {
+	return nil, nil
+}
+
 func (c *Client) Snapshot() (state.JSMSnapshot, error) {
 	return nil, fmt.Errorf("Unimplemented")
 }

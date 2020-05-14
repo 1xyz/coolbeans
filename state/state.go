@@ -453,6 +453,9 @@ type JSM interface {
 	// This call returns all the allocated reservations in this tick call
 	Tick(nowSecs int64) ([]*Reservation, error)
 
+	// GetTubes returns the tubeNames of all current tubes
+	GetTubes() ([]TubeName, error)
+
 	// CheckClientState queries the job state machine whether the provided list of clientIds are waiting for reservations.
 	//
 	// The response returns the ClientIDs (i) which are waiting for reservations, (ii) those which are not waiting and (iii)

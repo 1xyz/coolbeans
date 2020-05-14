@@ -5,6 +5,7 @@ import (
 	"github.com/1xyz/coolbeans/state"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v2"
 	"time"
 )
 
@@ -150,6 +151,8 @@ func (c *cmdProcessor) processRequest(req *CmdRequest) {
 		resp = c.kickN(cli, req)
 	case KickJob:
 		resp = c.kick(cli, req)
+	case ListTubes:
+		resp = c.listTubes(cli, req)
 	case Peek:
 		resp = c.peek(cli, req)
 	case PeekBuried:
@@ -315,6 +318,25 @@ func (c *cmdProcessor) kickN(cli *client, req *CmdRequest) *CmdResponse {
 	return resp
 }
 
+func (c *cmdProcessor) listTubes(cli *client, req *CmdRequest) *CmdResponse {
+	resp := NewCmdResponseFromReq(req)
+	tubes, err := c.jsm.GetTubes()
+	if err != nil {
+		resp.setResponse(MsgInternalError)
+		return resp
+	}
+
+	b, err := yaml.Marshal(tubes)
+	if err != nil {
+		log.Errorf("cmdProcessor.listTubes: yaml.Marshal err = %v", err)
+		resp.setResponse(MsgInternalError)
+		return resp
+	}
+
+	sendYamlResponse(b, req, cli)
+	return nil
+}
+
 func (c *cmdProcessor) peek(cli *client, req *CmdRequest) *CmdResponse {
 	cmd, ok := req.cmd.(*idArg)
 	if !ok {
@@ -388,7 +410,7 @@ func (c *cmdProcessor) statsJob(cli *client, req *CmdRequest) *CmdResponse {
 		return resp
 	}
 
-	sendStatResponse(b, req, cli)
+	sendYamlResponse(b, req, cli)
 	return nil
 }
 
@@ -406,7 +428,7 @@ func (c *cmdProcessor) statsTube(cli *client, req *CmdRequest) *CmdResponse {
 		return resp
 	}
 
-	sendStatResponse(b, req, cli)
+	sendYamlResponse(b, req, cli)
 	return nil
 }
 
@@ -418,18 +440,19 @@ func (c *cmdProcessor) stats(cli *client, req *CmdRequest) *CmdResponse {
 		return resp
 	}
 
-	sendStatResponse(b, req, cli)
+	sendYamlResponse(b, req, cli)
 	return nil
 }
 
-const statHdr = "---"
+var yamlHdr = []byte{'-', '-', '-', '\n'}
 
-func sendStatResponse(b []byte, req *CmdRequest, cli *client) {
-	bLen := len(b) + len(statHdr) + 1 // 4 additional bytes for a header & newlines
-	s := fmt.Sprintf("OK %d", bLen)
+func sendYamlResponse(b []byte, req *CmdRequest, cli *client) {
+	respBytes := make([]byte, 0)
+	respBytes = append(respBytes, yamlHdr...)
+	respBytes = append(respBytes, b...)
+	s := fmt.Sprintf("OK %d", len(respBytes))
 	sendCmdResponse(req.ID, cli, []byte(s), true /*hasMore*/)
-	sendCmdResponse(req.ID, cli, []byte(statHdr), true)
-	sendCmdResponse(req.ID, cli, b, false)
+	sendCmdResponse(req.ID, cli, respBytes, false)
 }
 
 func (c *cmdProcessor) touch(cli *client, req *CmdRequest) *CmdResponse {
@@ -596,8 +619,19 @@ type CmdRequest struct {
 }
 
 func (req CmdRequest) String() string {
-	return fmt.Sprintf("CmdRequest (ID: %v, CmdType: %s, ClientID: %s)",
-		req.ID, req.CmdType, req.ClientID)
+	arg := ""
+	if req.cmd != nil {
+		if req.CmdType == Put {
+			// Don't want to display the data bytes in put
+			if parg, ok := req.cmd.(*putArg); ok {
+				arg = fmt.Sprintf("[pri=%v delay=%v size=%v ttr=%v]", parg.pri, parg.delay, parg.size, parg.ttr)
+			}
+		} else {
+			arg = fmt.Sprintf("[%+v]", req.cmd)
+		}
+	}
+	return fmt.Sprintf("CmdRequest (ReqID: %v, CmdType: %s, Arg: %s ClientID: %s)",
+		req.ID, req.CmdType, arg, req.ClientID)
 }
 
 func NewCmdRequest(cmdData *CmdData, clientID state.ClientID) (CmdRequest, error) {
@@ -632,7 +666,7 @@ func NewCmdRequest(cmdData *CmdData, clientID state.ClientID) (CmdRequest, error
 		cmdRequest.cmd, err = NewIDArg(cmdData)
 	case StatsTube:
 		cmdRequest.cmd, err = NewTubeArg(cmdData)
-	case Quit, Reserve, PeekReady, PeekDelayed, PeekBuried, Stats:
+	case ListTubes, PeekReady, PeekDelayed, PeekBuried, Quit, Reserve, Stats:
 	default:
 		err = ErrCmdNotFound
 	}

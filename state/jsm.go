@@ -120,6 +120,11 @@ func (jsm *localJSM) GetJob(jobID JobID) (Job, error) {
 	return e.job, nil
 }
 
+func (jsm *localJSM) GetTubes() ([]TubeName, error) {
+	jsm.stat.nCmdListTubes++
+	return jsm.tubes.GetTubeNames(), nil
+}
+
 func (jsm *localJSM) Delete(jobID JobID, clientID ClientID) error {
 	jsm.stat.nCmdDelete++
 	if e, err := jsm.jobs.Get(jobID); err != nil {
@@ -331,8 +336,12 @@ func (jsm *localJSM) GetStatsAsYaml(nowSeconds int64) ([]byte, error) {
 		"cmd-list-tube-used":       s.nCmdListTubesUsed,
 		"cmd-list-tubes-watched":   s.nCmdListTubesWatched,
 		"cmd-pause-tube":           s.nCmdPauseTube,
-		"job-timeouts":             s.nJobTimeouts,
-		"total-jobs":               s.nTotalJobs,
+
+		"job-timeouts":        s.nJobTimeouts,
+		"total-jobs":          s.nTotalJobs,
+		"current-connections": jsm.clients.Len(),
+
+		"current-tubes": len(jsm.tubes),
 	}
 	for k, v := range jsm.tubes.TotalJobCounts() {
 		stats[k] = v
@@ -1146,7 +1155,6 @@ type procStats struct {
 	// CommandSpecific Counts
 	nCmdBury                uint64
 	nCmdDelete              uint64
-	nCmdGetJob              uint64
 	nCmdIgnore              uint64
 	nCmdKick                uint64
 	nCmdKickN               uint64

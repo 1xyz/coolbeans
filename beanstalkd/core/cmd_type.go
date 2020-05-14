@@ -7,8 +7,7 @@ import (
 
 // CmdType refers to the type of command in beanstalkd context
 
-// go:generate stringer -type=CmdType --output cmd_type_string.go
-
+//go:generate stringer -type=CmdType --output cmd_type_string.go
 type CmdType int
 
 const (
@@ -18,7 +17,7 @@ const (
 	Ignore
 	Kick
 	KickJob
-	List
+	ListTubes
 	ListTubeUser
 	PauseTube
 	Peek

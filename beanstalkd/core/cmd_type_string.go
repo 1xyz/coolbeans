@@ -14,7 +14,7 @@ func _() {
 	_ = x[Ignore-3]
 	_ = x[Kick-4]
 	_ = x[KickJob-5]
-	_ = x[List-6]
+	_ = x[ListTubes-6]
 	_ = x[ListTubeUser-7]
 	_ = x[PauseTube-8]
 	_ = x[Peek-9]
@@ -36,9 +36,9 @@ func _() {
 	_ = x[Max-25]
 }
 
-const _CmdType_name = "UnknownBuryDeleteIgnoreKickKickJobListListTubeUserPauseTubePeekPeekBuriedPeekDelayedPeekReadyPutQuitReleaseReserveReserveJobReserveWithTimeoutStatsStatsJobStatsTubeTouchUseWatchMax"
+const _CmdType_name = "UnknownBuryDeleteIgnoreKickKickJobListTubesListTubeUserPauseTubePeekPeekBuriedPeekDelayedPeekReadyPutQuitReleaseReserveReserveJobReserveWithTimeoutStatsStatsJobStatsTubeTouchUseWatchMax"
 
-var _CmdType_index = [...]uint8{0, 7, 11, 17, 23, 27, 34, 38, 50, 59, 63, 73, 84, 93, 96, 100, 107, 114, 124, 142, 147, 155, 164, 169, 172, 177, 180}
+var _CmdType_index = [...]uint8{0, 7, 11, 17, 23, 27, 34, 43, 55, 64, 68, 78, 89, 98, 101, 105, 112, 119, 129, 147, 152, 160, 169, 174, 177, 182, 185}
 
 func (i CmdType) String() string {
 	if i < 0 || i >= CmdType(len(_CmdType_index)-1) {

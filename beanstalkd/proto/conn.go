@@ -51,8 +51,14 @@ func (c *Conn) reply(s string) {
 }
 
 func (c *Conn) replyBytes(b []byte) {
-	c.conn.Write(b)
-	c.conn.Write([]byte("\r\n"))
+	if n, err := c.conn.Write(b); err != nil {
+		log.Warnf("conn.replyBytes: c.conn.Write. err = %v", err)
+	} else if n != len(b) {
+		log.Warnf("conn.replyBytes: n=%d != len(b) = %d", n, len(b))
+	}
+	if _, err := c.conn.Write([]byte("\r\n")); err != nil {
+		log.Warnf("conn.replyBytes: c.conn.Write (newline). err = %v", err)
+	}
 }
 
 func (c *Conn) dispatchCommand() {
@@ -71,7 +77,7 @@ func (c *Conn) dispatchCommand() {
 	}
 
 	req, err := core.NewCmdRequest(c.lastCmd, c.clientReg.ID)
-	ctxLog.Debugf("CmdRequest %v\n", req)
+	log.Infof("conn.dispatchCommand: CmdRequest %v", req)
 	if err != nil {
 		ctxLog.Errorf("core.NewCmdRequest err=%v", err)
 		if err == core.ErrCmdNotFound {
@@ -124,7 +130,9 @@ func (c *Conn) stop() {
 	}
 
 	log.WithField("method", "conn.stop").Debugf("closing connection")
-	c.conn.Close()
+	if err := c.conn.Close(); err != nil {
+		log.Warnf("conn.stop: c.conn.close(): err = %v", err)
+	}
 }
 
 func (c *Conn) wantEndLine() {
@@ -163,6 +171,7 @@ func (c *Conn) wantData() {
 	c.buffer = extraBytes
 	if err != nil {
 		if err == io.EOF {
+			ctxLog.Infof("EOF detected")
 			c.state = Close
 		} else if err == core.ErrDelimiterMissing {
 			c.reply(core.MsgBadFormat)
@@ -190,6 +199,7 @@ func (c *Conn) wantCommand() {
 	c.buffer = extraBytes
 	if err != nil {
 		if err == io.EOF {
+			ctxLog.Infof("EOF detected")
 			c.state = Close
 		} else if err == core.ErrDelimiterMissing {
 			c.reply(core.MsgBadFormat)
