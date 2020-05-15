@@ -1,3 +1,5 @@
+![ci-build](https://github.com/1xyz/coolbeans/workflows/ci-build/badge.svg)
+
 <img src="doc/bean_3185124.svg" align=right width=300px />
 
 - [Coolbeans](#coolbeans)
