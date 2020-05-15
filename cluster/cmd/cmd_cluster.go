@@ -8,6 +8,7 @@ import (
 	"github.com/1xyz/coolbeans/store"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/docopt/docopt-go"
+	"github.com/hashicorp/raft"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -147,9 +148,11 @@ func RunCoolbeans(c *ClusterNodeConfig) error {
 	}
 	if err := BootstrapCluster(c, s, peersAddrs); err != nil {
 		log.Errorf("RunCoolbeans: BootstrapCluster err=%v", err)
-		if err := JoinCluster(c, peersAddrs); err != nil {
-			log.Errorf("RunCoolbeans: BootstrapCluster JoinCluster failed! %v", err)
-			return fmt.Errorf("bootstrapCluster JoinCluster failed err %w", err)
+		if err != raft.ErrCantBootstrap {
+			if err := JoinCluster(c, peersAddrs); err != nil {
+				log.Errorf("RunCoolbeans: BootstrapCluster JoinCluster failed! %v", err)
+				return fmt.Errorf("bootstrapCluster JoinCluster failed err %w", err)
+			}
 		}
 	}
 	var opts []grpc.ServerOption
@@ -187,11 +190,8 @@ func BootstrapCluster(c *ClusterNodeConfig, s *store.Store, peerAddrs []string) 
 	if len(bootstrapAddr) == 0 {
 		bootstrapAddr = c.RaftListenAddr
 	}
-	log.Infof("BootstrapCluster: Attempting to bootstrap cluster from node %v using addr=%v", c.NodeId, bootstrapAddr)
-	if err := s.BootstrapCluster(map[string]string{c.NodeId: bootstrapAddr}); err != nil {
-		return fmt.Errorf("s.BootstrapCluster. err = %w", err)
-	}
-	return nil
+	log.Infof("BootstrapCluster: Bootstrap cluster from node %v using addr=%v", c.NodeId, bootstrapAddr)
+	return s.BootstrapCluster(map[string]string{c.NodeId: bootstrapAddr})
 }
 
 func CanBootstrapCluster(c *ClusterNodeConfig, peerAddrs []string) (bool, error) {
