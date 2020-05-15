@@ -12,6 +12,10 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     steps:
+    - name: Install Protoc
+      uses: arduino/setup-protoc@master
+      with:
+        version: '3.11.4'      
 
     - name: Set up Go 1.13+
       uses: actions/setup-go@v2
