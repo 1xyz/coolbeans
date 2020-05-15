@@ -232,3 +232,32 @@ func TestKickArg(t *testing.T) {
 		assert.Equalf(t, e.outArg, pa, e.msg)
 	}
 }
+
+func TestReleaseArg(t *testing.T)  {
+	// bury <id> <pri>
+	var entries = []struct {
+		inArg  string
+		outArg *releaseArg
+		err    error
+		msg    string
+	}{
+		{"12328 1 10", &releaseArg{id: 12328, pri: 1, delay: 10}, nil,
+			"expect valid arg"},
+		{"10 100 ", nil, ErrBadFormat,
+			"must have exact arg count"},
+		{"32898abc", nil, ErrBadFormat,
+			"args must have numeric args"},
+	}
+
+	for _, e := range entries {
+		d := &CmdData{
+			CmdType:  Unknown,
+			Args:     e.inArg,
+			Data:     nil,
+			NeedData: false,
+		}
+		pa, err := NewReleaseArg(d)
+		assert.Equalf(t, e.err, err, e.msg)
+		assert.Equalf(t, e.outArg, pa, e.msg)
+	}
+}

@@ -295,7 +295,7 @@ func NewReleaseArg(data *CmdData) (*releaseArg, error) {
 		return nil, ErrBadFormat
 	}
 
-	delay, err := strconv.ParseInt(tm["pri"], 10, 64)
+	delay, err := strconv.ParseInt(tm["delay"], 10, 64)
 	if err != nil {
 		log.Errorf("NewReleaseArg: ParseInt(delay) err=%v", err)
 		return nil, ErrBadFormat
