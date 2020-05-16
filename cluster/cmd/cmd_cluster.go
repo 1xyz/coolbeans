@@ -106,15 +106,15 @@ func waitForShutdown(s *store.Store, c *ClusterNodeConfig, gs *grpc.Server) {
 }
 
 func shutdown(s *store.Store, c *ClusterNodeConfig, gs *grpc.Server) {
-	if err := s.TransferLeadership(); err != nil {
-		log.Errorf("shutdown: s.TransferLeadership: err=%v.", err)
-	}
+	// if err := s.TransferLeadership(); err != nil {
+	// 	log.Errorf("shutdown: s.TransferLeadership: err=%v.", err)
+	// }
 	if err := LeaveCluster(c, parsePeerAddrs(c.NodePeerAddrs)); err != nil {
 		log.Errorf("shutdown: LeaveCluster err = %v", err)
 	}
-	if err := s.Close(); err != nil {
-		log.Errorf("shutdown: s.close(). err = %v", err)
-	}
+	// if err := s.Close(); err != nil {
+	// 	log.Errorf("shutdown: s.close(). err = %v", err)
+	// }
 	log.Infof("shutdown: stop to the grpc server")
 	gs.Stop()
 	log.Infof("shutdown: complete")
