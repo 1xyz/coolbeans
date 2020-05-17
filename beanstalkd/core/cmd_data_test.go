@@ -233,7 +233,7 @@ func TestKickArg(t *testing.T) {
 	}
 }
 
-func TestReleaseArg(t *testing.T)  {
+func TestReleaseArg(t *testing.T) {
 	// bury <id> <pri>
 	var entries = []struct {
 		inArg  string

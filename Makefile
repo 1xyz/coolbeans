@@ -10,9 +10,11 @@ BINARY=coolbeans
 BUILD_BINARY=bin/$(BINARY)
 # go source files, ignore vendor directory
 SRC = $(shell find . -type f -name '*.go' -not -path "./vendor/*")
+BRANCH = $(shell git rev-parse --abbrev-ref HEAD)
+SAFE_BRANCH = $(subst /,-,$(BRANCH))
 # current git version short-hash
 VER = $(shell git rev-parse --short HEAD)
-DOCKER_TAG = "$(VER)"
+DOCKER_TAG = "$(SAFE_BRANCH)-$(VER)"
 
 info:
 	@echo " target         ⾖ Description.                                    "
