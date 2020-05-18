@@ -83,6 +83,7 @@ func (c *Conn) dispatchCommand() {
 		if err == core.ErrCmdNotFound {
 			c.reply(core.MsgUnknownCommand)
 		} else if err == core.ErrBadFormat {
+			ctxLog.Errorf("Badformat")
 			c.reply(core.MsgBadFormat)
 		} else {
 			c.reply(core.MsgInternalError)
@@ -171,10 +172,11 @@ func (c *Conn) wantData() {
 	c.buffer = extraBytes
 	if err != nil {
 		if err == io.EOF {
-			ctxLog.Infof("EOF detected")
+			ctxLog.Errorf("EOF detected")
 			c.state = Close
 		} else if err == core.ErrDelimiterMissing {
-			c.reply(core.MsgBadFormat)
+			ctxLog.Errorf("Delimiter not detected")
+			c.reply(core.MsgExpectCRLF)
 			c.state = WantEndLine
 		} else {
 			ctxLog.Errorf("internal-error %v", err)
@@ -202,6 +204,7 @@ func (c *Conn) wantCommand() {
 			ctxLog.Infof("EOF detected")
 			c.state = Close
 		} else if err == core.ErrDelimiterMissing {
+			ctxLog.Errorf("Badformat")
 			c.reply(core.MsgBadFormat)
 			c.state = WantEndLine
 		} else {
@@ -215,7 +218,12 @@ func (c *Conn) wantCommand() {
 	cmdData, err := core.ParseCommandLine(string(cmdBytes))
 	if err != nil {
 		if err == core.ErrCmdNotFound || err == core.ErrCmdTokensMissing {
+			ctxLog.Errorf("Badformat")
 			c.reply(core.MsgBadFormat)
+		} else if err == core.ErrJobSizeTooBig {
+			ctxLog.Errorf("ErrJobSizeTooBig")
+			c.reply(core.MsgJobTooBig)
+			c.state = WantEndLine
 		} else {
 			ctxLog.Errorf("internal-error %v", err)
 			c.reply(core.MsgInternalError)

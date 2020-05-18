@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -22,13 +23,21 @@ func TestParseCommandLine(t *testing.T) {
 			ErrCmdNotFound,
 			"expect ErrCmdNotFound to be returned"},
 		{"put",
-			&CmdData{Put, "", []byte{}, true},
 			nil,
-			"expect cmdline to be parse even if there are no args"},
+			ErrBadFormat,
+			"expect cmdline to return ErrBadFormat for Put if there are no args"},
+		{"stats-tube",
+			&CmdData{StatsTube, "", nil, false},
+			nil,
+			"expect cmdline to return nil for other commands if there are no args"},
 		{"  ",
 			nil,
 			ErrCmdTokensMissing,
 			"expect ErrCmdTokensMissing to be returned"},
+		{fmt.Sprintf("put 0 100 30 %d", MaxJobDataSizeBytes+1),
+			nil,
+			ErrJobSizeTooBig,
+			"expect valid put parsing"},
 	}
 
 	for _, e := range entries {
