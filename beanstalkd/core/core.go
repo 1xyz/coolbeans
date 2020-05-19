@@ -22,7 +22,7 @@ const (
 	MaxCmdSizeBytes = 226
 
 	// Max. Job Data size in bytes (inclusive of 2 byte delimiter)
-	MaxJobDataSizeBytes = (16 * 1024) + 2
+	MaxJobDataSizeBytes = (128 * 1024) + 2
 
 	// The size of a read buffer
 	readBufferSizeBytes = 4 * 1024
@@ -60,6 +60,12 @@ const (
 
 	// Error message to indicate if the entity (job etc) cannot be found
 	MsgNotFound = "NOT_FOUND"
+
+	// Error message to indicate that the job is too big
+	MsgJobTooBig = "JOB_TOO_BIG"
+
+	// Error message to indicate that CRLF is needed
+	MsgExpectCRLF = "EXPECTED_CRLF"
 )
 
 var (
@@ -76,6 +82,9 @@ var (
 	// characters occur where an integer is expected, if the wrong number of
 	// arguments are present, or if the command line is mal-formed in any other
 	ErrBadFormat = errors.New("bad format command")
+
+	// ErrJobSizeTooBig he client has requested to put a job with a body larger that the configured limit
+	ErrJobSizeTooBig = errors.New("job size too big")
 
 	// ErrCmdTokensMissing - when the provided command has no tokens
 	ErrCmdTokensMissing = errors.New("bad command, cannot find atleast one token")

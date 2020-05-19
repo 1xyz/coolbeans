@@ -43,16 +43,27 @@ func ParseCommandLine(cmdLine string) (*CmdData, error) {
 		}
 
 		var data []byte = nil
-		if c == Put {
-			data = make([]byte, 0)
-		}
-
-		return &CmdData{
+		cd := &CmdData{
 			CmdType:  c,
 			Args:     args,
 			Data:     data,
-			NeedData: data != nil,
-		}, nil
+			NeedData: false,
+		}
+
+		if c == Put {
+			cd.Data = make([]byte, 0)
+			cd.NeedData = true
+			arg, err := NewPutArg(cd)
+			if err != nil {
+				log.Errorf("ParseCommandLine: NewPutArg err = %v", err)
+				return nil, err
+			}
+			if arg.size > MaxJobDataSizeBytes {
+				return nil, ErrJobSizeTooBig
+			}
+		}
+
+		return cd, nil
 	}
 }
 
@@ -91,7 +102,8 @@ var (
 	// kick-job <id>
 	idArgRe = regexp.MustCompile(`(?P<id>^\d+$)`)
 
-	// reserve-with-timeout regex -- reserve-with-timeout <seconds>
+	// reserve-with-timeo
+	// ut regex -- reserve-with-timeout <seconds>
 	reserveWithTimeoutRe = regexp.MustCompile(`(?P<seconds>^\d+$)`)
 
 	// bury <id> <pri>
