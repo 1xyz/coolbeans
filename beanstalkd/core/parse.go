@@ -89,14 +89,14 @@ func Scan(rdr io.Reader, b []byte, limitBytes int) ([]byte, []byte, error) {
 
 // ScanJobData - Scans the provided "b" byte slice in search of a newline
 // (\\r\\n) delimiter. If the provided slice does'nt have a newline, then
-// scan the reader upto "MaxJobDataSizeBytes-len(b)" bytes in search of a
+// scan the reader upto "maxJobDataSizeBytes-len(b)" bytes in search of a
 // delimiter
 // Returns a triple of command, extra byte slice and an error
 // The extra byte slice are any additional bytes read after encountering the
 // delimiter.
-func ScanJobData(rdr io.Reader, b []byte) ([]byte, []byte, error) {
+func ScanJobData(rdr io.Reader, b []byte, maxJobDataSizeBytes int) ([]byte, []byte, error) {
 	// Note this temporarily create a byte-array upto 16Kb in size
-	return Scan(rdr, b, MaxJobDataSizeBytes)
+	return Scan(rdr, b, maxJobDataSizeBytes)
 }
 
 // ScanCmdLine - Scans the provided "b" byte slice in search of a newline

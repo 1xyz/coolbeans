@@ -168,7 +168,7 @@ func (c *Conn) wantData() {
 	}
 
 	ctxLog := log.WithField("method", "conn.wantData")
-	dataBytes, extraBytes, err := core.ScanJobData(c.reader, c.buffer)
+	dataBytes, extraBytes, err := core.ScanJobData(c.reader, c.buffer, c.cmdProcessor.MaxJobDataSize())
 	c.buffer = extraBytes
 	if err != nil {
 		if err == io.EOF {
@@ -215,7 +215,8 @@ func (c *Conn) wantCommand() {
 		return
 	}
 
-	cmdData, err := core.ParseCommandLine(string(cmdBytes))
+	cmdData, err := core.ParseCommandLine(string(cmdBytes),
+		c.cmdProcessor.MaxJobDataSize())
 	if err != nil {
 		if err == core.ErrCmdNotFound || err == core.ErrCmdTokensMissing {
 			ctxLog.Errorf("Badformat")

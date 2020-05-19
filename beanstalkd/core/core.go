@@ -10,10 +10,16 @@ import (
 var (
 	// Delimiter for commands and data
 	DelimRe = regexp.MustCompile(`\r\n`)
-
-	// request count
-	requestCount int64 = 0
 )
+
+type Config struct {
+	ListenAddr            string
+	ListenPort            int
+	UpstreamAddrs         string
+	ConnectTimeout        int
+	MaxJobSize            int
+	MaxReservationTimeout int
+}
 
 const (
 	TickDuration = 1000 * time.Millisecond
@@ -29,9 +35,6 @@ const (
 
 	// Default tube name
 	defaultTubeName = state.TubeName("default")
-
-	// Maximum reservation timeout
-	MaxReservationTimeout = 24 * 3600
 )
 
 const (

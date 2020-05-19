@@ -28,17 +28,16 @@ type TcpServer struct {
 	shutdownWG *sync.WaitGroup
 }
 
-func NewJSM(jsmAddrs string, connTimeout time.Duration) state.JSM {
-	if len(jsmAddrs) == 0 {
+func NewJSM(upstreamAddrs string, connTimeout time.Duration) state.JSM {
+	if len(upstreamAddrs) == 0 {
 		jsm, err := state.NewJSM()
 		if err != nil {
 			log.Panicf("NewJSM: err=%v", err)
 		}
-
 		return jsm
 	}
 
-	s := strings.Split(jsmAddrs, ",")
+	s := strings.Split(upstreamAddrs, ",")
 	for i, e := range s {
 		log.Debugf("NewJSM: jsm server addr %d = %v", i, e)
 	}
@@ -51,12 +50,13 @@ func NewJSM(jsmAddrs string, connTimeout time.Duration) state.JSM {
 	return nc
 }
 
-func NewTcpServer(address string, jsmAddrs string, connTimeout time.Duration) *TcpServer {
-	jsm := NewJSM(jsmAddrs, connTimeout)
-
+func NewTcpServer(cfg *core.Config) *TcpServer {
+	addr := fmt.Sprintf("%s:%v", cfg.ListenAddr, cfg.ListenPort)
+	connectTimeout := time.Duration(cfg.ConnectTimeout) * time.Second
+	jsm := NewJSM(cfg.UpstreamAddrs, connectTimeout)
 	return &TcpServer{
-		address:    address,
-		cmdProc:    core.NewCommandProcess(jsm),
+		address:    addr,
+		cmdProc:    core.NewCommandProcessor(jsm, cfg),
 		doneCh:     make(chan bool),
 		shutdownWG: &sync.WaitGroup{},
 	}
