@@ -6,6 +6,8 @@ import (
 	"testing"
 )
 
+const maxTestJobDataSizeBytes = 2 << 15
+
 func TestParseCommandLine(t *testing.T) {
 	// put <pri> <delay> <ttr> <bytes>
 	var entries = []struct {
@@ -34,14 +36,14 @@ func TestParseCommandLine(t *testing.T) {
 			nil,
 			ErrCmdTokensMissing,
 			"expect ErrCmdTokensMissing to be returned"},
-		{fmt.Sprintf("put 0 100 30 %d", MaxJobDataSizeBytes+1),
+		{fmt.Sprintf("put 0 100 30 %d", maxTestJobDataSizeBytes+1),
 			nil,
 			ErrJobSizeTooBig,
 			"expect valid put parsing"},
 	}
 
 	for _, e := range entries {
-		cmdData, err := ParseCommandLine(e.inCmdLine)
+		cmdData, err := ParseCommandLine(e.inCmdLine, maxTestJobDataSizeBytes)
 		assert.Equalf(t, e.err, err, e.msg)
 		assert.Equalf(t, e.outCmData, cmdData, e.msg)
 	}

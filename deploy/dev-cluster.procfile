@@ -5,4 +5,4 @@ cluster-node1: ./bin/coolbeans cluster-node --node-id bean1 --root-dir /tmp/bean
 
 cluster-node2: ./bin/coolbeans cluster-node --node-id bean2 --root-dir /tmp/bean2 --bootstrap-node-id bean0 --node-peer-addrs=:11000,:12000,:13000 --raft-listen-addr=127.0.0.1:23000 --node-listen-addr=127.0.0.1:13000 --raft-advertized-addr=127.0.0.1:23000
 
-beanstalkd-0:  ./bin/coolbeans   beanstalkd -l 127.0.0.1 -j 127.0.0.1:11000,127.0.0.1:12000,127.0.0.1:13000 -p 11300
+beanstalkd-0:  ./bin/coolbeans   beanstalkd --listen-addr 127.0.0.1 --upstream-addrs 127.0.0.1:11000,127.0.0.1:12000,127.0.0.1:13000 --listen-port 11300

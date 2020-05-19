@@ -22,17 +22,22 @@ type CommandProcessor interface {
 
 	// Shutdown this processor
 	Shutdown()
+
+	// Return the maximum job data size in Bytes
+	MaxJobDataSize() int
 }
 
-func NewCommandProcess(jsm state.JSM) CommandProcessor {
+func NewCommandProcessor(jsm state.JSM, cfg *Config) CommandProcessor {
 	return &cmdProcessor{
-		newClientReqCh:  make(chan bool),
-		newClientRespCh: make(chan ClientReg),
-		clients:         make(ClientSet),
-		cmdRequestCh:    make(chan CmdRequest),
-		ticker:          time.NewTicker(TickDuration),
-		jsm:             jsm,
-		shutdownCh:      make(chan bool),
+		newClientReqCh:        make(chan bool),
+		newClientRespCh:       make(chan ClientReg),
+		clients:               make(ClientSet),
+		cmdRequestCh:          make(chan CmdRequest),
+		ticker:                time.NewTicker(TickDuration),
+		jsm:                   jsm,
+		shutdownCh:            make(chan bool),
+		maxJobSizeBytes:       cfg.MaxJobSize,
+		maxReserveTimeoutSecs: cfg.MaxReservationTimeout,
 	}
 }
 
@@ -58,6 +63,12 @@ type cmdProcessor struct {
 
 	// channel to signal a shutdown
 	shutdownCh chan bool
+
+	// Maximum job size in bytes
+	maxJobSizeBytes int
+
+	// Maximum reservation timeout in seconds.
+	maxReserveTimeoutSecs int
 }
 
 func (c *cmdProcessor) Run() {
@@ -118,6 +129,10 @@ func (c *cmdProcessor) RegisterClient() *ClientReg {
 	}
 
 	return &resp
+}
+
+func (c *cmdProcessor) MaxJobDataSize() int {
+	return c.maxJobSizeBytes
 }
 
 func (c *cmdProcessor) DispatchRequest(request CmdRequest) {
@@ -534,7 +549,9 @@ func (c *cmdProcessor) reserveWithTimeout(cli *client, req *CmdRequest) *CmdResp
 		ctxLog.Panicf("cast-error, cannot cast to *reserveWithTimeoutCmd")
 	}
 
-	if cmd.timeoutSeconds > MaxReservationTimeout {
+	if cmd.timeoutSeconds > c.maxReserveTimeoutSecs {
+		log.Errorf("reserveWithTimeout: cmd.timeoutSecs=%d exceeds limit of %d",
+			cmd.timeoutSeconds, c.maxReserveTimeoutSecs)
 		resp := NewCmdResponseFromReq(req)
 		resp.setResponse(MsgBadFormat)
 		return resp
@@ -545,7 +562,7 @@ func (c *cmdProcessor) reserveWithTimeout(cli *client, req *CmdRequest) *CmdResp
 }
 
 func (c *cmdProcessor) reserve(cli *client, req *CmdRequest) {
-	c.appendReservation(cli, req.ID, nowSeconds(), addToNow(MaxReservationTimeout))
+	c.appendReservation(cli, req.ID, nowSeconds(), addToNow(c.maxReserveTimeoutSecs))
 }
 
 func (c *cmdProcessor) appendReservation(cli *client, reqID string, nowSecs, deadlineAt int64) {

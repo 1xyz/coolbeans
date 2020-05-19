@@ -27,7 +27,7 @@ var (
 
 // ParseCommandLine parses the command line string provided a connected client
 // into a valid CmdData struct
-func ParseCommandLine(cmdLine string) (*CmdData, error) {
+func ParseCommandLine(cmdLine string, maxJobDataSizeBytes int) (*CmdData, error) {
 	s := spaceRe.ReplaceAllLiteralString(cmdLine, "")
 	tokens := splitRe.Split(s, 2)
 	if len(tokens) == 0 || (len(tokens) == 1 && tokens[0] == "") {
@@ -58,7 +58,7 @@ func ParseCommandLine(cmdLine string) (*CmdData, error) {
 				log.Errorf("ParseCommandLine: NewPutArg err = %v", err)
 				return nil, err
 			}
-			if arg.size > MaxJobDataSizeBytes {
+			if arg.size > maxJobDataSizeBytes {
 				return nil, ErrJobSizeTooBig
 			}
 		}
