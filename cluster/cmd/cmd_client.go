@@ -40,6 +40,8 @@ func cmdLeader(nodeAddr string, timeout time.Duration) {
 	if err != nil {
 		log.Fatalf("cmdLeader: err = %v", err)
 	}
+	defer c.Close()
+	
 	b, err := c.IsNodeLeader()
 	if err != nil {
 		log.Fatalf("cmdLeader err %v", err)

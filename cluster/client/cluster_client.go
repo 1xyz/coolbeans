@@ -111,7 +111,7 @@ func (c *ClusterNodeClient) IsNodeLeader() (bool, error) {
 		return false, err
 	}
 
-	log.Debugf("LeaveCluster: IsNodeLeader:%v ", b.IsLeader)
+	log.Debugf("IsNodeLeader:%v ", b.IsLeader)
 	return b.IsLeader, nil
 }
 
