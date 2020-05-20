@@ -3,6 +3,7 @@ module github.com/1xyz/coolbeans
 go 1.13
 
 require (
+	github.com/armon/go-metrics v0.0.0-20190430140413-ec5e00d3c878
 	github.com/beanstalkd/go-beanstalk v0.0.0-20200229072127-2b7b37f17578
 	github.com/davecgh/go-spew v1.1.1
 	github.com/docopt/docopt-go v0.0.0-20180111231733-ee0de3bc6815
@@ -14,6 +15,7 @@ require (
 	github.com/maxbrunsfeld/counterfeiter/v6 v6.2.3 // indirect
 	github.com/ory/go-acc v0.2.1
 	github.com/pkg/errors v0.8.1
+	github.com/prometheus/client_golang v0.9.3
 	github.com/sirupsen/logrus v1.5.0
 	github.com/smartystreets/goconvey v1.6.4
 	github.com/stretchr/testify v1.5.1

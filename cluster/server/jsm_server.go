@@ -2,11 +2,13 @@ package server
 
 import (
 	v1 "github.com/1xyz/coolbeans/api/v1"
+	"github.com/armon/go-metrics"
 	pb "github.com/golang/protobuf/proto"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"strings"
 	"time"
 )
 
@@ -268,8 +270,10 @@ func (j *JSMServer) StreamReserveUpdates(req *v1.ReserveUpdateRequest,
 }
 
 func (j *JSMServer) performApply(opType v1.OpType, req pb.Message, resp pb.Message) error {
+	name := strings.ToLower(opType.String())
+	metrics.IncrCounter([]string{"jsm", name}, float32(1))
+	defer metrics.MeasureSince([]string{"jsm", name, "latency_ms"}, time.Now())
 	logc := log.WithField("method", "performApply")
-
 	b, err := pb.Marshal(req)
 	if err != nil {
 		logc.Errorf("pb.marshal. Err=%v", err)
@@ -285,6 +289,7 @@ func (j *JSMServer) performApply(opType v1.OpType, req pb.Message, resp pb.Messa
 
 	applyResp := j.r.ApplyOp(&applyReq)
 	if applyResp.ErrorCode > v1.ResultCode_OK {
+		metrics.IncrCounter([]string{"jsm", name, "errors"}, float32(1))
 		logc.Errorf("applyOp. Err = %v msg = %v",
 			applyResp.ErrorCode, applyResp.ErrorMessage)
 		return status.Errorf(codes.Code(applyResp.ErrorCode),
@@ -292,6 +297,7 @@ func (j *JSMServer) performApply(opType v1.OpType, req pb.Message, resp pb.Messa
 	}
 
 	if err := pb.Unmarshal(applyResp.Body, resp); err != nil {
+		metrics.IncrCounter([]string{"jsm", name, "errors"}, float32(1))
 		logc.Errorf("pb.Unmarshal. Err=%v", err)
 		return status.Errorf(codes.Internal,
 			"error un-marshalling resp %v", err)
