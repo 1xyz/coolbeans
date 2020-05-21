@@ -6,15 +6,19 @@ import (
 	"github.com/1xyz/coolbeans/cluster/client"
 	"github.com/1xyz/coolbeans/cluster/server"
 	"github.com/1xyz/coolbeans/store"
+	"github.com/armon/go-metrics"
+	"github.com/armon/go-metrics/prometheus"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/docopt/docopt-go"
 	"github.com/hashicorp/raft"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	healthgrpc "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/status"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"strings"
@@ -43,6 +47,7 @@ type ClusterNodeConfig struct {
 	SnapshotThreshold    int
 	TrailingLogCount     int
 	SnapshotIntervalSecs int
+	PrometheusAddr       string
 }
 
 func CmdClusterNode(argv []string, version string) {
@@ -78,7 +83,12 @@ Raft options:
     --snapshot-interval-secs=<secs>  Controls how often the raft library checks to perform a snapshot.
                                      The library randomly staggers between this value and 2x this value to 
                                      avoid all the nodes in the entire cluster from performing a snapshot 
-                                     at once [default: 120].`
+                                     at once [default: 120].
+    
+Metrics options:
+    --prometheus-addr=<addr>         Start a prometheus server to expose metrics at this address. By default no server
+                                     is started. Example value is ":2122" [default: ]
+`
 
 	opts, err := docopt.ParseArgs(usage, argv[1:], version)
 	if err != nil {
@@ -106,15 +116,9 @@ func waitForShutdown(s *store.Store, c *ClusterNodeConfig, gs *grpc.Server) {
 }
 
 func shutdown(s *store.Store, c *ClusterNodeConfig, gs *grpc.Server) {
-	// if err := s.TransferLeadership(); err != nil {
-	// 	log.Errorf("shutdown: s.TransferLeadership: err=%v.", err)
-	// }
 	if err := LeaveCluster(c, parsePeerAddrs(c.NodePeerAddrs)); err != nil {
 		log.Errorf("shutdown: LeaveCluster err = %v", err)
 	}
-	// if err := s.Close(); err != nil {
-	// 	log.Errorf("shutdown: s.close(). err = %v", err)
-	// }
 	log.Infof("shutdown: stop to the grpc server")
 	gs.Stop()
 	log.Infof("shutdown: complete")
@@ -140,6 +144,10 @@ func RunCoolbeans(c *ClusterNodeConfig) error {
 		LocalNodeID:         c.NodeId,
 	})
 	if err != nil {
+		return err
+	}
+	if err := InitializeMetrics("jellybeans", c.PrometheusAddr); err != nil {
+		log.Errorf("RunCoolbeans: InitializeMetrics: %v", err)
 		return err
 	}
 	if err := s.Open(); err != nil {
@@ -302,4 +310,34 @@ func JoinCluster(c *ClusterNodeConfig, peerAddrs []string) error {
 		i++
 	}
 	return fmt.Errorf("joinCluster: unable to join cluster")
+}
+
+func InitializeMetrics(serviceName, metricsAddr string) error {
+	var sink metrics.MetricSink = nil
+	var err error = nil
+	if metricsAddr != "" {
+		sink, err = prometheus.NewPrometheusSink()
+		if err != nil {
+			return err
+		}
+	} else {
+		sink = &metrics.BlackholeSink{}
+	}
+
+	m, err := metrics.NewGlobal(metrics.DefaultConfig(serviceName), sink)
+	if err != nil {
+		return err
+	}
+	m.EnableHostname = false
+	spew.Dump(m)
+
+	if metricsAddr != "" {
+		go func() {
+			http.Handle("/metrics", promhttp.Handler())
+			if err := http.ListenAndServe(metricsAddr, nil); err != nil {
+				log.Fatalf("Unable to start prometheus server err = %v", err)
+			}
+		}()
+	}
+	return nil
 }

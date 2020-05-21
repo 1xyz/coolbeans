@@ -1,0 +1,24 @@
+# sample local Prometheus config
+global:
+  scrape_interval:     30s # Default is every 1 minute.
+  evaluation_interval: 30s # Default is every 1 minute.
+  # scrape_timeout is set to the global default (10s).
+
+alerting:
+  alertmanagers:
+  - static_configs:
+    - targets:
+      # - alertmanager:9093
+
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+
+scrape_configs:
+  - job_name: cluster-node
+    scrape_interval: 30s
+    static_configs:
+    - targets:
+      - localhost:2020
+      - localhost:2021
+      - localhost:2022
