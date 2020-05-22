@@ -3,6 +3,9 @@ package proxy
 import (
 	"errors"
 	"fmt"
+	"sync"
+	"time"
+
 	v1 "github.com/1xyz/coolbeans/api/v1"
 	"github.com/1xyz/coolbeans/state"
 	"github.com/1xyz/coolbeans/store"
@@ -12,8 +15,6 @@ import (
 	_ "google.golang.org/grpc/health"
 	"google.golang.org/grpc/resolver"
 	"google.golang.org/grpc/resolver/manual"
-	"sync"
-	"time"
 )
 
 var (
@@ -21,7 +22,18 @@ var (
 		"loadBalancingPolicy": "round_robin",
 		"healthCheckConfig": {
 			"serviceName": ""
-		}
+		},
+		"methodConfig": [{
+			"name": [{"service":"coolbeans.api.v1.JobStateMachine"}],
+			"waitForReady": true,
+			"retryPolicy": {
+				"MaxAttempts": 10,
+				"InitialBackoff": "1s",
+				"MaxBackoff": "30s",
+				"BackoffMultiplier": 1.0,
+				"RetryableStatusCodes": [ "UNAVAILABLE" ]
+			}
+		}]
 	}`
 )
 
@@ -77,6 +89,7 @@ func (c *Client) Open() error {
 				log.Infof("Done signaled leaving reservations loop")
 				return
 			}
+			log.Infof("proxy.client.Open: got error: %v", err)
 			if err != nil {
 				log.Errorf("proxy.client.Open: c.GetReservations: err = %v", err)
 				// ToDo: Consider using a exponential backoff strategy if c.getReservations fails.
