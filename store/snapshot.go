@@ -1,6 +1,8 @@
 package store
 
 import (
+	"encoding/binary"
+	"fmt"
 	v1 "github.com/1xyz/coolbeans/api/v1"
 	"github.com/1xyz/coolbeans/state"
 	"github.com/golang/protobuf/proto"
@@ -13,6 +15,255 @@ import (
 	"time"
 )
 
+//
+
+type SnapshotWriter struct {
+	js state.JSMSnapshot
+}
+
+func NewSnapshotWriter(jsm state.JSM) (*SnapshotWriter, error) {
+	js, err := jsm.Snapshot()
+	if err != nil {
+		return nil, err
+	}
+	return &SnapshotWriter{js: js}, nil
+}
+
+func (sw *SnapshotWriter) Persist(sink raft.SnapshotSink) error {
+	snkID := sink.ID()
+	err := func(sinkID string) error {
+		var nBytesWritten, nCRWritten, nJobWritten uint64 = 0, 0, 0
+
+		crEntries, err := sw.js.SnapshotClients()
+		if err != nil {
+			return err
+		}
+		for cr := range crEntries {
+			crProto := toV1ClientResvEntryProto(cr)
+			if n, err := WriteProto(sink, crProto); err != nil {
+				return fmt.Errorf("persist: WriteProto(cr): err: %w", err)
+			} else {
+				nBytesWritten += uint64(n)
+				nCRWritten++
+			}
+		}
+
+		jEntries, err := sw.js.SnapshotJobs()
+		if err != nil {
+			return err
+		}
+		for j := range jEntries {
+			jProto := JobToJobProto(j)
+			if n, err := WriteProto(sink, jProto); err != nil {
+				return fmt.Errorf("persist: WriteProto(j): err: %w", err)
+			} else {
+				nBytesWritten += uint64(n)
+				nJobWritten++
+			}
+		}
+
+		log.Infof("Persist: bytesWritten=%d clientResvns=%d jobs=%v",
+			nBytesWritten, nCRWritten, nJobWritten)
+		return sink.Close()
+	}(snkID)
+
+	if err != nil {
+		log.Errorf("Persist: write. err: %v", err)
+		if err := sink.Cancel(); err != nil {
+			log.Errorf("Persist: sink.cancel. err=%v", err)
+		}
+	}
+	return err
+}
+
+func (sw *SnapshotWriter) Release() {
+	log.Info("SnapshotWriter: Release called")
+}
+
+func toV1ClientResvEntryProto(cr *state.ClientResvEntry) *v1.ClientResvEntryProto {
+	cliProto := &v1.ClientResvEntryProto{
+		ClientId:         string(cr.CliID),
+		ResvDeadlineAt:   cr.ResvDeadlineAt,
+		IsWaitingForResv: cr.IsWaitingForResv,
+		TickAt:           cr.TickAt,
+		ReqId:            cr.ReqID,
+		HeapIndex:        int32(cr.HeapIndex),
+		WatchedTube:      make([]string, 0),
+	}
+	for _, t := range cr.WatchedTubes {
+		cliProto.WatchedTube = append(cliProto.WatchedTube, string(t))
+	}
+	return cliProto
+}
+
+func WriteProto(w io.Writer, m proto.Message) (int, error) {
+	bytes, err := proto.Marshal(m)
+	if err != nil {
+		return 0, fmt.Errorf("WriteProto: proto.Marshal: err: %w", err)
+	}
+	return WriteBytes(w, bytes)
+}
+
+func WriteBytes(w io.Writer, b []byte) (int, error) {
+	buf := make([]byte, 4)
+	binary.LittleEndian.PutUint32(buf, uint32(len(b)))
+	nBuf, err := w.Write(buf)
+	if err != nil {
+		return 0, err
+	}
+	nMsg, err := w.Write(b)
+	if err != nil {
+		return 0, err
+	}
+	return nBuf + nMsg, nil
+}
+
+// ////////////// ////////////// ////////////// ////////////// ////////////
+
+type SnapshotReader struct {
+	js        state.JSMSnapshot
+	crEntries []*state.ClientResvEntry
+	jEntries  []state.Job
+}
+
+func NewSnapshotReader(jsm state.JSM) (*SnapshotReader, error) {
+	js, err := jsm.Snapshot()
+	if err != nil {
+		return nil, err
+	}
+	return &SnapshotReader{
+		js:        js,
+		crEntries: make([]*state.ClientResvEntry, 0),
+	}, nil
+}
+
+func (sr *SnapshotReader) Restore(rdr io.Reader, timeout time.Duration) error {
+	for {
+		m, err := ReadProto(rdr)
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			log.Errorf("Restore: ReadProto: err = %v", err)
+			return err
+		}
+
+		if crProto, ok := m.(*v1.ClientResvEntryProto); ok {
+			sr.crEntries = append(sr.crEntries, toClientResvEntry(crProto))
+			continue
+		}
+		if jProto, ok := m.(*v1.JobProto); ok {
+			sr.jEntries = append(sr.jEntries, NewJobFromJobProto(jProto))
+			continue
+		}
+
+		return fmt.Errorf("unknown message cannot decode %v %T", m, m)
+	}
+
+	if err := sr.restoreCREntries(timeout); err != nil {
+		log.Errorf("Restore: restoreCREntries: err = %v", err)
+		return err
+	}
+	if err := sr.restoreJobs(timeout); err != nil {
+		log.Errorf("Restore: restoreJobs err = %v", err)
+		return err
+	}
+	// commit the entries to the new JSM
+	sr.js.FinalizeRestore()
+	return nil
+}
+
+func (sr *SnapshotReader) restoreCREntries(timeout time.Duration) error {
+	crCh := make(chan *state.ClientResvEntry)
+	errCh := make(chan error)
+
+	go func(restoreCh <-chan *state.ClientResvEntry, errCh chan<- error) {
+		defer close(errCh)
+
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+
+		n := len(sr.crEntries)
+		log.Debugf("restoreCREntries: restore n=%v clients to job state machine", n)
+		errCh <- sr.js.RestoreClients(ctx, n, crCh)
+	}(crCh, errCh)
+
+	for _, r := range sr.crEntries {
+		crCh <- r
+	}
+
+	close(crCh)
+	err := <-errCh
+	return err
+}
+
+func (sr *SnapshotReader) restoreJobs(timeout time.Duration) error {
+	jobCh := make(chan state.Job)
+	errCh := make(chan error)
+
+	go func(restoreCh <-chan state.Job, errCh chan<- error) {
+		defer close(errCh)
+
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+
+		log.Debugf("restoreJobs: restore jobs to job state machine")
+		errCh <- sr.js.RestoreJobs(ctx, restoreCh)
+	}(jobCh, errCh)
+
+	for _, job := range sr.jEntries {
+		jobCh <- job
+	}
+
+	close(jobCh)
+	err := <-errCh
+	return err
+}
+
+func ReadProto(r io.Reader) (proto.Message, error) {
+	b, err := ReadBytes(r)
+	if err != nil {
+		return nil, err
+	}
+
+	var msg proto.Message
+	if err := proto.Unmarshal(b, msg); err != nil {
+		return nil, err
+	} else {
+		return msg, nil
+	}
+}
+
+func ReadBytes(r io.Reader) ([]byte, error) {
+	buf := make([]byte, 4)
+	if n, err := io.ReadFull(r, buf); err != nil {
+		return nil, err
+	} else if n != 4 {
+		return nil, fmt.Errorf("readBytes: expected 4 hdr bytes to be read")
+	}
+
+	size := binary.LittleEndian.Uint32(buf)
+	b := make([]byte, size)
+	if n, err := io.ReadFull(r, b); err != nil {
+		return nil, err
+	} else if uint32(n) != size {
+		return nil, fmt.Errorf("readBytes expected size=%d payload bytes to be read", size)
+	}
+	return b, nil
+}
+
+func toClientResvEntry(crProto *v1.ClientResvEntryProto) *state.ClientResvEntry {
+	return &state.ClientResvEntry{
+		CliID:            state.ClientID(crProto.ClientId),
+		WatchedTubes:     []state.TubeName{},
+		ResvDeadlineAt:   crProto.ResvDeadlineAt,
+		IsWaitingForResv: crProto.IsWaitingForResv,
+		TickAt:           crProto.TickAt,
+		ReqID:            crProto.ReqId,
+		HeapIndex:        int(crProto.HeapIndex),
+	}
+}
+
+// ////////////// ////////////// ////////////// ////////////
 type snapshot struct {
 	snap *v1.SnapshotProto
 }

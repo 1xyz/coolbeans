@@ -382,14 +382,20 @@ type fsm Store
 // the FSM should be implemented in a fashion that allows for concurrent
 // updates while a snapshot is happening.
 func (f *fsm) Snapshot() (raft.FSMSnapshot, error) {
-	return NewSnapshotFrom(f.jsm)
+	return NewSnapshotWriter(f.jsm)
+	//return NewSnapshotFrom(f.jsm)
 }
 
 // Restore is used to restore an FSM from a snapshot. It is not called
 // concurrently with any other command. The FSM must discard all previous
 // state.
 func (f *fsm) Restore(r io.ReadCloser) error {
-	return RestoreSnapshotTo(r, f.jsm, f.c.RestoreTimeout)
+	sr, err := NewSnapshotReader(f.jsm)
+	if err != nil {
+		return err
+	}
+	return sr.Restore(r, f.c.RestoreTimeout)
+	// return RestoreSnapshotTo(r, f.jsm, f.c.RestoreTimeout)
 }
 
 // Apply log is invoked once a log entry is committed. It returns a value
