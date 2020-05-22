@@ -62,10 +62,9 @@ Here are a few ways you can contribute:
 
 - Be an early adopter, Try it out on your machine, testbed or pre-production stack and give us [feedback or report issues](https://github.com/1xyz/coolbeans/issues/new/choose).
 
-- Have a feature in mind. Tell us more about it or file an issue.
+- Have a feature in mind. Tell us more about by [filing an issue](https://github.com/1xyz/coolbeans/issues/new/choose).
 
-- Want to contribute to code, documentation. Checkout the [contribution guide](./CONTRIBUTING.md) and our code of conduct. 
-
+- Want to contribute to code, documentation. Checkout the [contribution guide](./CONTRIBUTING.md). 
 
 ---
 
