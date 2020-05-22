@@ -41,7 +41,8 @@ type ClusterNodeConfig struct {
 	RaftAdvertizedAddr   string
 	RaftTimeoutSecs      int
 	MaxPoolSize          int
-	NoInMem              bool
+	NoDiskLog            bool
+	NoFsync              bool
 	RestoreTimeoutSecs   int
 	RetainSnapshotCount  int
 	SnapshotThreshold    int
@@ -72,9 +73,11 @@ Raft options:
     --raft-advertized-addr=<addr>    Advertized address for Raft service [default: 127.0.0.1:21000].
     --raft-timeout-secs=<secs>       Raft peer network connection timeout in seconds [default: 30].
     --max-pool-size=<n>              Maximum number of raft connections pooled [default: 3].
-    --no-in-mem                      If set raft logs are persisted to disk [default: false].
+    --no-disk-log                    If set, raft log is not persisted to disk [default: false].
+    --no-fsync                       If set, raft log is not flushed to disk for every log commit. This option
+                                     is only used when raft logs are persisted to disk [default: false].  
     --restore-timeout-secs=<secs>    Timeout in seconds for a snapshot restore operation [default: 60].
-    --retain-snapshot-count=<n>      The maximum number of file snapshots to retain on disk [default: 5].
+    --retain-snapshot-count=<n>      The maximum number of file snapshots to retain on disk [default: 3].
     --snapshot-threshold=<n>         Controls how many outstanding logs there must be before a 
                                      Raft snapshot is taken [default: 8192].
     --trailing-log-count=<n>         Controls how many logs are left after a snapshot. This is used so 
@@ -137,7 +140,8 @@ func RunCoolbeans(c *ClusterNodeConfig) error {
 		RestoreTimeout:      time.Duration(c.RestoreTimeoutSecs) * time.Second,
 		RootDir:             c.RootDir,
 		RaftBindAddr:        c.RaftListenAddr,
-		Inmem:               !c.NoInMem,
+		Inmem:               c.NoDiskLog,
+		LogNoSync:           c.NoFsync,
 		SnapshotInterval:    time.Duration(c.SnapshotIntervalSecs) * time.Second,
 		TrailingLogs:        uint64(c.TrailingLogCount),
 		SnapshotThreshold:   uint64(c.SnapshotThreshold),
@@ -163,6 +167,7 @@ func RunCoolbeans(c *ClusterNodeConfig) error {
 			}
 		}
 	}
+
 	var opts []grpc.ServerOption
 	grpcServer := grpc.NewServer(opts...)
 	v1.RegisterClusterServer(grpcServer, server.NewClusterServer(s))

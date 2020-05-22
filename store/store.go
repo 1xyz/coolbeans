@@ -72,6 +72,11 @@ type Config struct {
 	// Inmem is a boolean, controls if the data is persisted
 	Inmem bool
 
+	// When set to false skips fsync calls to the bolt store
+	// it is not recommended to use NoSync as false on boltDb
+	// Refer: https://github.com/boltdb/bolt/issues/612
+	LogNoSync bool
+
 	// local node id of this node
 	LocalNodeID string
 }
@@ -137,13 +142,26 @@ func (s *Store) Open() error {
 		logStore = raft.NewInmemStore()
 		stableStore = raft.NewInmemStore()
 	} else {
-		boltDB, err := raftboltdb.NewBoltStore(filepath.Join(s.c.RootDir, "raft.db"))
-		if err != nil {
-			return fmt.Errorf("new bolt store: %s", err)
+		log.Infof("Open: creating bolt store")
+		dbfile := filepath.Join(s.c.RootDir, "raft.db")
+		if s.c.LogNoSync {
+			// Event its a risk, it is an option I'd like to provide
+			// refer https://github.com/boltdb/bolt/issues/612#issuecomment-256977332
+			log.Warnf("boltDb setting NoSync == true is risky option")
 		}
 
-		logStore = boltDB
-		stableStore = boltDB
+		boltStore, err := raftboltdb.New(raftboltdb.Options{Path: dbfile, NoSync: s.c.LogNoSync})
+		if err != nil {
+			return fmt.Errorf("open: raftboltdb.New: err: %w", err)
+		}
+
+		// ToDo: consider logCache (experiment & measure)
+		// raftLog, err := raft.NewLogCache(1024, boltStore)
+		// if err != nil {
+		// 	return fmt.Errorf("open: raft.NewLogCache: err: %w", err)
+		// }
+		logStore = boltStore
+		stableStore = boltStore
 	}
 
 	// Instantiate the Raft systems.
