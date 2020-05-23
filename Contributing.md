@@ -112,6 +112,4 @@ Other
 
 - Reporting an issue, please refer [here](https://github.com/1xyz/coolbeans/issues/new/choose)
 
-
-
-
+- Guidelines for a good commit message. please refer [here](https://golang.org/doc/contribute.html#commit_messages)
