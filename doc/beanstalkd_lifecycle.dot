@@ -1,0 +1,31 @@
+##
+# Lifecycle of a beanstalkd job
+# Refer: https://github.com/beanstalkd/beanstalkd/blob/master/doc/protocol.txt
+# for original documentation of the job lifecycle
+digraph job_lifecycle {
+    rankdir=LR;
+    size="8,5"
+    node [margin=0 fontcolor=blue fontsize=10 width=0.6 shape=circle style=filled]
+    Start -> Delayed[ label = "put with delay",fontsize=10 ];
+    Start -> Ready  [ label = "put", fontsize=10 ];
+    Ready -> Reserved [ label = "reserve", fontsize=10 ];
+    Reserved -> Reserved [ label = "touch", fontsize=10 ];
+    Reserved -> Ready [label = "release/ttr timeout", fontsize=10 ];
+    Reserved -> Buried  [ label = "bury", fontsize=10 ];
+    Reserved -> Delayed  [ label = "release with delay", fontsize=10 ];
+    Reserved -> Done  [ label = "delete", fontsize=10 ];
+    Buried -> Done  [ label = "delete", fontsize=10 ];
+    Buried -> Ready [ label = "kick", fontsize=10 ];
+    Delayed -> Ready [ label = "delay timeout", fontsize=10 ];
+
+    subgraph foo {
+        rank="same"
+        Ready
+        Delayed
+    }
+    subgraph bar {
+        rank="same"
+        Reserved
+        Buried
+    }
+}
