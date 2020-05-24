@@ -1,91 +1,70 @@
 ![ci-build](https://github.com/1xyz/coolbeans/workflows/ci-build/badge.svg)
+![ci-release](https://github.com/1xyz/coolbeans/workflows/ci-release/badge.svg)
 
-<img src="doc/bean_3185124.svg" align=right width=300px />
+<img src="doc/bean_3185124.svg" align=right width=200px />
 
 - [Coolbeans](#coolbeans)
-    - [Local Development](#local-development)
-        - [Dependencies](#dependencies)
-        - [Build the binary](#build-the-binary)
-        - [Run the service](#run-the-service)
-        - [Other run options](#other-run-options)
-    - [Example usage](#example-usage)
-        - [Configuration](#configuration)
-        - [Usage](#usage-1)
-    - [Testing](#testing)
-        - [Dependencies](#dependencies)
-        - [Usage](#usage-2)
+    - [Motivation](#motivation)
+    - [Key features](#key-features)
+    - [Releases](#releases)
+    - [Getting started](#getting-started)
+    - [How to contribute](#how-to-contribute)
+    - [Local Development](doc/Developer.md)
 
 
 Coolbeans
 =========
 
-Coolbeans is a lightweight distributed work queue that uses the [beanstalkd protocol](https://github.com/beanstalkd/beanstalkd/blob/master/doc/protocol.txt). 
+Coolbeans is a distributed replicated work queue service that implements the [beanstalkd protocol](https://github.com/beanstalkd/beanstalkd/blob/master/doc/protocol.txt). 
 
-Unlike a message queue, [beanstalkd](https://github.com/beanstalkd/beanstalkd) provides primitive operations to work with jobs. 
+Unlike a message queue, [beanstalkd](https://github.com/beanstalkd/beanstalkd) is a work queue that provides primitive operations to work with jobs. 
 
-Coolbeans primarily differs from beanstalkd in that it allows the work queue to be replicated across multiple machines.
+Coolbeans primarily differs from beanstalkd in that it allows the work queue to be replicated across multiple machines. It uses the [RAFT consensus algorithm](https://raft.github.io/) to replicate the job state consistently across machines.
 
-Local Development
------------------
+Motivation
+----------
 
-This section walks through the process of building the source and running coolbeans.
+Beanstalkd is a [feature-rich](https://www.igvita.com/2010/05/20/scalable-work-queues-with-beanstalk/) and easy to use queue. Beanstalkd, however has a few drawbacks that include: (i) A lack of replication or high availability in terms of machine failures. (ii) There is no native sharding, (iii) No native support for encryption & authentication between the service & the client.
 
-### Dependencies
+Given the initial setup of beanstalkd is simple, having a HA or sharded production setup is non-trivial. Our premise with Coolbeans is to provide a replicated beanstalkd queue followed by addressing the other issues incrementally. Read about our design approach [here](doc/Design.md).
 
-Coolbeans is written in golang, it requires go1.13 or newer. It is recommended to use [go version manager](https://github.com/moovweb/gvm) to manage multiple go versions.
+Key features
+------------
 
-A Dockerfile and compose file is provided. This requires Docker version 17 or newer. Refer [docker docs](https://docs.docker.com/) on how to install.
-
-The project depends on protocol buffers:
-- Ensure you have protoc & protoc-gen-go installed and accessible in your paths. [This](https://grpc.io/docs/quickstart/go/#protocol-buffers) is an excellent resource which has steps on how to get started. 
-
-### Build the binary.
-
-The [Makefile](./Makefile) provides different target options to build and run from source. 
-
-To explore these options: 
-
-    make
-
-Generate a statically linked binary to the local environment:
-
-    make build
-
-
-### Run the service
-
-Following are few options to run this on a local option. A beanstalkd process is setup which runs on port 11300.
-
-Run a single node cluster. Note this spawns two processes, a cluster-node process and beanstalkd proxy.:
-
-    make run-single
-
-### Run a beanstalkd client to test
-
-Download and run a beanstalk cli from [here](https://github.com/beanstalkd/beanstalkd/wiki/Tools) or [here](https://github.com/1xyz/beanstalk-cli)
-
-
-### Other Run options
-
-Run a three node cluster. Note this spawns four processes, three cluster-node process and beanstalkd proxy.:
-
-    make run-cluster
-
-Run a three node cluster via docker-compose. Run this prior to running docker-compose-up
-
-    make docker-compose-build
-
-    make docker-compose-up
-
-Once done:
-
-    make docker-compose-down
+- A fully replicated work queue built using [Hashicorp's Raft library](https://github.com/hashicorp/raft).
+- Strong consistency of all queue operations. 
+- Compatible with [existing beanstalkd clients](https://github.com/beanstalkd/beanstalkd/wiki/Client-Libraries).
+- Easy installation, available as a static binary or as a Linux docker image.
+- Monitor metrics using Prometheus and visualize them via Grafana.
 
 
 Releases
 --------
 
-Coolbeans is also released as a static binary, which can be downloaded from the [release pages](https://github.com/1xyz/coolbeans/releases)
+- Static binary can be downloaded from the [release pages](https://github.com/1xyz/coolbeans/releases)
+- Docker image  can be pulled from [here](https://hub.docker.com/r/1xyz/coolbeans)
+
+
+Getting Started 
+---------------
+
+Refer the [Getting started guide](doc/Setup.md)  
+
+If you prefer to try to run coolbeans on Kubernetes, refer [here](https://github.com/1xyz/coolbeans-k8s).
+
+
+How to contribute
+-----------------
+
+Coolbeans is currently at `alpha` release quality. It is all about improving the quality of this by testing, testing & more testing.
+
+Here are a few ways you can contribute:
+
+- Be an early adopter, Try it out on your machine, testbed or pre-production stack and give us [feedback or report issues](https://github.com/1xyz/coolbeans/issues/new/choose).
+
+- Have a feature in mind. Tell us more about by [filing an issue](https://github.com/1xyz/coolbeans/issues/new/choose).
+
+- Want to contribute to code, documentation. Checkout the [contribution guide](./CONTRIBUTING.md). 
 
 ---
 

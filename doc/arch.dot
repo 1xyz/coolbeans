@@ -1,0 +1,19 @@
+# High level arch
+# dot -Tpng arch.dot -o arch.png
+digraph {
+   subgraph cluster_client {
+        label="Client"; style=filled; bgcolor="#D0C0A0" fontsize=13;
+        client [shape=record label="{Beanstalkd Client\nLib}" fontsize=13  style=filled ]      
+   }
+   subgraph cluster_proxy {
+        label="Beanstalkd Proxy\n Server"; style=filled; bgcolor="#D0C0A0" fontsize=13;
+        proxy  [shape=record label="{Beanstalkd server|Proxy|Cluster node\nGRPC Client}" fontsize=13  style=filled ];
+   };
+   subgraph cluster_node {
+        label="Cluster Node server" style=filled; bgcolor="#D0C0A0" fontsize=13;
+        server [shape=record label="{GRPC server|{Raft Leader|<f2>Raft RPC\nServer}|Beanstalkd state|RAM or Disk Storage}" fontsize=13]
+   }
+
+   client -> proxy 
+   proxy -> server 
+}

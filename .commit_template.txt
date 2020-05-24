@@ -1,5 +1,10 @@
-Add your title here
 
-# Summary
-Summary:
-
+# A short line summary
+#
+# Description elaborates and should provide context for the change and explain what it does. 
+# Plain text Only
+#
+# Fixes #<issue-id>
+#
+# Example of a good commit message: 
+# Refer https://golang.org/doc/contribute.html#commit_messages
