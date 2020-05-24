@@ -26,7 +26,7 @@ Motivation
 
 Beanstalkd is a feature-rich and easy to use queue. Beanstalkd, however has a few drawbacks that include: (i) A lack of replication or high availability in terms of machine failures. (ii) There is no native sharding, (iii) No native support for encryption & authentication between the service & the client.
 
-Our premise with Coolbeans is to provide a replicated beanstalkd queue followed by addressing the other issues. Read about our design approach [here](doc/Design.md).
+Given the initial setup of beanstalkd is very simple, having production setup is challenging. Our premise with Coolbeans is to provide a replicated beanstalkd queue followed by addressing the other issues incrementally. Read about our design approach [here](doc/Design.md).
 
 Key features
 ------------
