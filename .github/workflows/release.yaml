@@ -27,17 +27,25 @@ jobs:
 
         - name: Build x64 linux release
           run: make release/linux
+        
         - name: Zip linux build
           run: zip -j coolbeans-linux-amd64.zip README.md LICENSE.txt bin/linux/coolbeans
 
         - name: Build x64 darwin release
           run: make release/darwin
+        
         - name: Zip darwin build
           run: zip -j coolbeans-darwin-amd64.zip README.md LICENSE.txt bin/darwin/coolbeans
 
         - name: Get tag name
           id: get_tag_name
           run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
+
+        - name: changelog
+          uses: scottbrenner/generate-changelog-action@master
+          id: Changelog
+          env:
+            REPO: ${{ github.repository }}
 
         - name: Create Release
           id: create_release
@@ -49,6 +57,8 @@ jobs:
             release_name: Release ${{ github.ref }}
             draft: false
             prerelease: false
+            body: |
+              ${{ steps.Changelog.outputs.changelog }}
 
         - name: Upload Linux Release Asset
           id: upload-release-asset-linux
@@ -74,5 +84,6 @@ jobs:
 
         - name: Docker login
           run: echo '${{ secrets.DOCKERHUB_PASS }}' | docker login --username 1xyz --password-stdin
+
         - name: Docker build and push release
           run: make docker-release

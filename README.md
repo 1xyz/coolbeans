@@ -1,7 +1,4 @@
-![ci-build](https://github.com/1xyz/coolbeans/workflows/ci-build/badge.svg)
-![release](https://github.com/1xyz/coolbeans/workflows/release/badge.svg)
-
-<img src="doc/bean_3185124.svg" align=right width=200px />
+![Build](https://github.com/1xyz/coolbeans/workflows/Build/badge.svg)
 
 - [Coolbeans](#coolbeans)
     - [Motivation](#motivation)
@@ -10,6 +7,8 @@
     - [Getting started](#getting-started)
     - [How to contribute](#how-to-contribute)
     - [Local Development](doc/Developer.md)
+
+<img src="doc/bean_3185124.svg" align=right width=200px />
 
 
 Coolbeans
