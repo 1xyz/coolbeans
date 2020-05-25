@@ -31,6 +31,12 @@ jobs:
         - name: Zip linux build
           run: zip -j coolbeans-linux-amd64.zip README.md LICENSE.txt bin/linux/coolbeans
 
+        - name: Build x64 darwin release
+          run: make release/darwin
+
+        - name: Zip darwin build
+          run: zip -j coolbeans-darwin-amd64.zip README.md LICENSE.txt bin/darwin/coolbeans
+
         - name: Create Release
           id: create_release
           uses: actions/create-release@v1
@@ -42,13 +48,24 @@ jobs:
             draft: false
             prerelease: false
 
-        - name: Upload Release Asset
-          id: upload-release-asset 
+        - name: Upload Linux Release Asset
+          id: upload-release-asset
           uses: actions/upload-release-asset@v1
           env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           with:
-            upload_url: ${{ steps.create_release.outputs.upload_url }} 
+            upload_url: ${{ steps.create_release.outputs.upload_url }}
             asset_path: ./coolbeans-linux-amd64.zip
-            asset_name: my-artifact.zip
+            asset_name: coolbeans-linux-amd64-${{ github.ref }}.zip
+            asset_content_type: application/zip
+
+        - name: Upload darwin Release Asset
+          id: upload-release-asset
+          uses: actions/upload-release-asset@v1
+          env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          with:
+            upload_url: ${{ steps.create_release.outputs.upload_url }}
+            asset_path: ./coolbeans-darwin-amd64.zip
+            asset_name: coolbeans-darwin-amd64-${{ github.ref }}.zip
             asset_content_type: application/zip
