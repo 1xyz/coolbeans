@@ -6,6 +6,7 @@ DELETE=rm
 DOCKER=docker
 DOCKER_COMPOSE=docker-compose
 DOCKER_REPO=1xyz/coolbeans
+DOCKER_DEV_REPO=1xyz/coolbeans-developer
 BINARY=coolbeans
 BUILD_BINARY=bin/$(BINARY)
 # go source files, ignore vendor directory
@@ -14,6 +15,7 @@ BRANCH = $(shell git rev-parse --abbrev-ref HEAD)
 SAFE_BRANCH = $(subst /,-,$(BRANCH))
 # current git version short-hash
 VER = $(shell git rev-parse --short HEAD)
+GIT_RELEASE_TAG=$(shell git describe --tags)
 DOCKER_TAG = "$(SAFE_BRANCH)-$(VER)"
 
 info:
@@ -44,8 +46,9 @@ info:
 	@echo
 	@echo " Docker targets"
 	@echo " --------------"
-	@echo " docker-build        build image $(DOCKER_REPO):$(DOCKER_TAG)      "
-	@echo " docker-push         push image $(DOCKER_REPO):$(DOCKER_TAG)      "		
+	@echo " docker-build        build image $(DOCKER_DEV_REPO):$(DOCKER_TAG)  "
+	@echo " docker-push         push image $(DOCKER_DEV_REPO):$(DOCKER_TAG)   "
+	@echo " docker-release      push image $(DOCKER_REPO):$(GIT_RELEASE_TAG)  "
 	@echo " docker-compose-up   run docker-compose-up                         "
 	@echo " docker-compose-down run docker-compose-down                       "
 	@echo " ------------------------------------------------------------------"
@@ -83,7 +86,6 @@ release/%: clean fmt protoc
 	$(GO) test ./...
 	@echo "build GOOS: $(subst release/,,$@) & GOARCH: amd64"
 	GOOS=$(subst release/,,$@) GOARCH=amd64 $(GO) build -o bin/$(subst release/,,$@)/$(BINARY) -v main.go
-
 
 .PHONY: run-single
 run-single: build
@@ -128,10 +130,14 @@ tidy:
 	$(GO) mod tidy
 
 docker-build:
-	$(DOCKER) build -t $(DOCKER_REPO):$(DOCKER_TAG) -f Dockerfile .
+	$(DOCKER) build -t $(DOCKER_DEV_REPO):$(DOCKER_TAG) -f Dockerfile .
 
 docker-push: docker-build
-	$(DOCKER) push $(DOCKER_REPO):$(DOCKER_TAG)
+	$(DOCKER) push $(DOCKER_DEV_REPO):$(DOCKER_TAG)
+
+docker-release: docker-release
+	$(DOCKER) build -t $(DOCKER_REPO):$(GIT_RELEASE_TAG) -f Dockerfile .
+	$(DOCKER) push $(DOCKER_REPO):$(GIT_RELEASE_TAG)
 
 docker-compose-build:
 	$(DOCKER_COMPOSE) --file deploy/docker-compose.yml --project-directory . build --no-cache

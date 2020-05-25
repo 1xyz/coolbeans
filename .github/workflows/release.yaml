@@ -27,15 +27,17 @@ jobs:
 
         - name: Build x64 linux release
           run: make release/linux
-
         - name: Zip linux build
           run: zip -j coolbeans-linux-amd64.zip README.md LICENSE.txt bin/linux/coolbeans
 
         - name: Build x64 darwin release
           run: make release/darwin
-
         - name: Zip darwin build
           run: zip -j coolbeans-darwin-amd64.zip README.md LICENSE.txt bin/darwin/coolbeans
+
+        - name: Get tag name
+          id: get_tag_name
+          run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
 
         - name: Create Release
           id: create_release
@@ -56,7 +58,7 @@ jobs:
           with:
             upload_url: ${{ steps.create_release.outputs.upload_url }}
             asset_path: ./coolbeans-linux-amd64.zip
-            asset_name: coolbeans-linux-amd64-${{ github.ref }}.zip
+            asset_name: coolbeans-linux-amd64-${{ steps.get_tag_name.outputs.VERSION }}.zip
             asset_content_type: application/zip
 
         - name: Upload darwin Release Asset
@@ -67,5 +69,5 @@ jobs:
           with:
             upload_url: ${{ steps.create_release.outputs.upload_url }}
             asset_path: ./coolbeans-darwin-amd64.zip
-            asset_name: coolbeans-darwin-amd64-${{ github.ref }}.zip
+            asset_name: coolbeans-darwin-amd64-${{ steps.get_tag_name.outputs.VERSION }}.zip
             asset_content_type: application/zip
