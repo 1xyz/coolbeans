@@ -1,11 +1,12 @@
-name: ci-build
+name: Build
 
 on:
   pull_request:
     branches: [ master ]
+  push:
+    branches: [ master ]
 
 jobs:
-
   build:
     name: Build
     runs-on: ubuntu-latest
@@ -29,3 +30,9 @@ jobs:
 
     - name: UnitTests
       run: make test
+
+    - name: Docker login
+      run: echo '${{ secrets.DOCKERHUB_PASS }}' | docker login --username 1xyz --password-stdin
+
+    - name: Docker build and push
+      run: make docker-push

@@ -1,5 +1,5 @@
 ![ci-build](https://github.com/1xyz/coolbeans/workflows/ci-build/badge.svg)
-![ci-release](https://github.com/1xyz/coolbeans/workflows/ci-release/badge.svg)
+![release](https://github.com/1xyz/coolbeans/workflows/release/badge.svg)
 
 <img src="doc/bean_3185124.svg" align=right width=200px />
 
