@@ -1,4 +1,6 @@
 ![Build](https://github.com/1xyz/coolbeans/workflows/Build/badge.svg)
+![Release](https://github.com/1xyz/coolbeans/workflows/Release/badge.svg)
+![Docker](https://img.shields.io/docker/pulls/1xyz/coolbeans)
 
 - [Coolbeans](#coolbeans)
     - [Motivation](#motivation)

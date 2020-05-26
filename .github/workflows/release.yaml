@@ -42,10 +42,8 @@ jobs:
           run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
 
         - name: changelog
-          uses: scottbrenner/generate-changelog-action@master
           id: Changelog
-          env:
-            REPO: ${{ github.repository }}
+          run: sh generate_changelog.sh
 
         - name: Create Release
           id: create_release
