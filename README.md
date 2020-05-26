@@ -38,7 +38,7 @@ Key features
 - Strong consistency of all queue operations. 
 - Compatible with [existing beanstalkd clients](https://github.com/beanstalkd/beanstalkd/wiki/Client-Libraries).
 - Easy installation, available as a static binary or as a Linux docker image.
-- Monitor metrics using Prometheus and visualize them via Grafana.
+- [Monitor metrics using Prometheus and visualize them via Grafana](https://github.com/1xyz/coolbeans-k8s/blob/master/doc/Metrics.md#setup-grafana).
 
 
 Releases
