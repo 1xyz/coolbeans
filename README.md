@@ -1,6 +1,8 @@
-![Build](https://github.com/1xyz/coolbeans/workflows/Build/badge.svg)
-![Release](https://github.com/1xyz/coolbeans/workflows/Release/badge.svg)
-![Docker](https://img.shields.io/docker/pulls/1xyz/coolbeans)
+[![Build](https://github.com/1xyz/coolbeans/workflows/Build/badge.svg)](https://github.com/1xyz/coolbeans/actions?query=workflow%3ABuild)
+[![Release](https://github.com/1xyz/coolbeans/workflows/Release/badge.svg)](https://github.com/1xyz/coolbeans/actions?query=workflow%3ARelease)
+[![Docker](https://img.shields.io/docker/pulls/1xyz/coolbeans)](https://hub.docker.com/r/1xyz/coolbeans/tags)
+
+
 
 - [Coolbeans](#coolbeans)
     - [Motivation](#motivation)
@@ -42,8 +44,9 @@ Key features
 Releases
 --------
 
-- Static binary can be downloaded from the [release pages](https://github.com/1xyz/coolbeans/releases)
-- Docker image  can be pulled from [here](https://hub.docker.com/r/1xyz/coolbeans)
+- Static binary can be downloaded from the [release pages](https://github.com/1xyz/coolbeans/releases).
+- Docker release images can be pulled from [here](https://hub.docker.com/r/1xyz/coolbeans).
+- Docker development images can be pulled from [here](https://hub.docker.com/r/1xyz/coolbeans-developer/tags).
 
 
 Getting Started 
