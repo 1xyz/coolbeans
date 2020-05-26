@@ -52,10 +52,9 @@ Releases
 Getting Started 
 ---------------
 
-Refer the [Getting started guide](doc/Setup.md)  
+- Getting started guide to run coolbeans on Kubernetes, refer [here](https://github.com/1xyz/coolbeans-k8s).
 
-If you prefer to try to run coolbeans on Kubernetes, refer [here](https://github.com/1xyz/coolbeans-k8s).
-
+- Getting started guide for other environments - Coming soon!
 
 How to contribute
 -----------------
