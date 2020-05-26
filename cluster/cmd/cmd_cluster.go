@@ -150,7 +150,7 @@ func RunCoolbeans(c *ClusterNodeConfig) error {
 	if err != nil {
 		return err
 	}
-	if err := InitializeMetrics("jellybeans", c.PrometheusAddr); err != nil {
+	if err := InitializeMetrics("coolbeans", c.PrometheusAddr); err != nil {
 		log.Errorf("RunCoolbeans: InitializeMetrics: %v", err)
 		return err
 	}
