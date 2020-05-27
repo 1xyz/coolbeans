@@ -203,7 +203,7 @@ func (c *Client) AppendReservation(clientID state.ClientID, reqID string, watche
 			log.Errorf("proxy.client.AppendReservation: c.waiting.Add clientID=%v err = %v", cli, err)
 			return nil, err
 		} else {
-			log.Errorf("proxy.client.AppendReservation: clientID=%v added to waiting", cli)
+			log.Debugf("proxy.client.AppendReservation: clientID=%v added to waiting", cli)
 		}
 	}
 
