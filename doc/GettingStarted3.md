@@ -24,7 +24,7 @@ The above example starts a new cluster node:
 
 #### Setup cluster-nodes bean1 & bean2
 
-    ./coolbeans --quiet cluster-node --node-id bean1 --root-dir /tmp/multi-bean/bean1 --bootstrap-node-id bean0 --node-peer-addrs 127.0.0.1:11000,127.0.0.1:12000,127.0.0.1:13000 --raft-listen-addr :22000 --node-listen-addr :12000
+    ./coolbeans  cluster-node --node-id bean1 --root-dir /tmp/multi-bean/bean1 --bootstrap-node-id bean0 --node-peer-addrs 127.0.0.1:11000,127.0.0.1:12000,127.0.0.1:13000 --raft-listen-addr :22000 --node-listen-addr :12000
 
     ./coolbeans  cluster-node --node-id bean2 --root-dir /tmp/multi-bean/bean2 --bootstrap-node-id bean0 --node-peer-addrs 127.0.0.1:11000,127.0.0.1:12000,127.0.0.1:13000 --raft-listen-addr :23000 --node-listen-addr :13000
 
