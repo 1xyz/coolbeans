@@ -837,14 +837,11 @@ func toV1Reservation(r *state.Reservation) (*v1.Reservation, error) {
 
 	cu, err := ParseClientURI(r.ClientId)
 	if err != nil {
-		log.WithField("method", "applyReserve").
-			Errorf("ParseClientURI clientID=%v err=%v", r.ClientId, err)
+		log.Errorf("toV1Reservation: parseClientURI: clientID=%v err=%v", r.ClientId, err)
 		return nil, err
 	}
-
-	log.Infof("toV1Reservation: proxyID = %v clientID=%v origclientID=%v status = %v",
+	log.Debugf("toV1Reservation: proxyID = %v clientID=%v origclientID=%v status = %v",
 		cu.proxyID, cu.clientID, r.ClientId, r.Status)
-
 	return &v1.Reservation{
 		RequestId: r.RequestId,
 		ClientId:  cu.clientID,

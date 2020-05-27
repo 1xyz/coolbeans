@@ -1,8 +1,9 @@
 package proxy
 
 import (
-	"errors"
 	"fmt"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"sync"
 	"time"
 
@@ -86,10 +87,12 @@ func (c *Client) Open() error {
 	go func() {
 		for {
 			err := c.GetReservations()
-			if err == ErrShutdown {
-				return
-			}
 			if err != nil {
+				s, ok := status.FromError(err)
+				if ok && s.Code() == codes.Canceled {
+					log.Errorf("c.GetReservations: Canceled signalled")
+					return
+				}
 				log.Errorf("proxy.client.Open: c.GetReservations: err = %v", err)
 				b := c.recoverClients.SetIfFalse()
 				log.Debugf("proxy.client.Open: c.GetReservations: recoverClients.SetIfFalse result = %v", b)
@@ -102,13 +105,7 @@ func (c *Client) Open() error {
 
 func (c *Client) Close() error {
 	log.Infof("Client: close, signaling shutdown")
-	c.reserveCtxMu.RLock()
-	if c.reserveCancel != nil {
-		log.Infof("reserveCancel called")
-		c.reserveCancel()
-	}
-	c.reserveCtxMu.RUnlock()
-
+	c.signalCancel()
 	if c.conn != nil {
 		return c.conn.Close()
 	}
@@ -460,14 +457,24 @@ func toClientIds(s []string) []state.ClientID {
 	return res
 }
 
-var ErrShutdown = errors.New("Done signaled")
+func (c *Client) setCancel(cf context.CancelFunc) {
+	c.reserveCtxMu.Lock()
+	defer c.reserveCtxMu.Unlock()
+	c.reserveCancel = cf
+}
+
+func (c *Client) signalCancel() {
+	c.reserveCtxMu.RLock()
+	defer c.reserveCtxMu.RUnlock()
+	if c.reserveCancel != nil {
+		c.reserveCancel()
+	}
+}
 
 func (c *Client) GetReservations() error {
 	ctx, cancelFunc := context.WithCancel(context.Background())
-	c.reserveCtxMu.Lock()
-	c.reserveCancel = cancelFunc
-	c.reserveCtxMu.Unlock()
-
+	c.setCancel(cancelFunc)
+	defer c.signalCancel()
 	stream, err := c.jsmClient.StreamReserveUpdates(ctx,
 		&v1.ReserveUpdateRequest{ProxyId: c.ProxyID})
 	if err != nil {
@@ -484,7 +491,7 @@ func (c *Client) GetReservations() error {
 
 		select {
 		case <-ctx.Done():
-			return ErrShutdown
+			return ctx.Err()
 		default:
 		}
 
