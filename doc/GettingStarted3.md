@@ -19,6 +19,7 @@ The above example starts a new cluster node:
 - the cluster-node starts two listeners, the raft service listens on `:21000` and the GRPC service listens on `:11000`. 
 - all data logs and snapshots will be persisted under the directory: `/tmp/multi-bean/bean0`. 
 - the bootstrap node, which the default assigned leader during the first time cluster formation, is `bean0`.
+- additionally, we define all the indicate all the initial peers as well: `127.0.0.1:11000`,`127.0.0.1:12000`,`127.0.0.1:13000`.
 
 
 #### Setup cluster-nodes bean1 & bean2
@@ -30,7 +31,7 @@ The above example starts a new cluster node:
 The above example starts two cluster nodes
 
 - with unique ids bean1 and bean2 which join node bean0 to form a three node cluster.
-- the bootstrap node in this case is still `bean0`.
+- the bootstrap node in this case is still `bean0`. What that means, is if we bring up all the three nodes in parallel, only bean0 becomes the leader, and bean1 and bean2 become followers. 
 
 
 #### Setup beanstalkd proxy

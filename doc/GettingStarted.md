@@ -25,7 +25,7 @@ The above example starts a new cluster node:
 - with a unique node-id bean0. 
 - the cluster-node starts two listeners, the raft service listens on `:21000` and the GRPC service listens on `:11000`. 
 - all data logs and snapshots will be persisted under the directory: `/tmp/single-bean0`. 
-- the bootstrap node, which the default assigned leader during the first time cluster formation, is `bean0`.
+- the bootstrap node, which is the default assigned leader during the first time cluster formation, is `bean0`.
 
 
 #### Start a new beanstalkd proxy-server
@@ -43,7 +43,7 @@ Run a beanstalkd client
 
 Checkout [beanstalkd's community page](https://github.com/beanstalkd/beanstalkd/wiki/Tools) for some tools
 
-Example: We picked yabean since we are familiar with it,
+Example: We picked yabean since we are familiar with it.
 
 ### Download & unzip yabean
 
