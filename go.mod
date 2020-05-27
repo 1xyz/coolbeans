@@ -23,6 +23,6 @@ require (
 	golang.org/x/sys v0.0.0-20200409092240-59c9f1ba88fa // indirect
 	golang.org/x/tools v0.0.0-20200413161937-250b2131eb8b
 	google.golang.org/grpc v1.28.1
-	google.golang.org/protobuf v1.23.0
+	google.golang.org/protobuf v1.24.0
 	gopkg.in/yaml.v2 v2.2.8
 )

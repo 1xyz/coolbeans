@@ -44,7 +44,6 @@ type Client struct {
 	jsmClient   v1.JobStateMachineClient
 	conn        *grpc.ClientConn
 	rq          *reservationsQueue
-	doneCh      chan bool
 
 	// waiting is a set of clients that are waiting for a
 	// reservation.
@@ -54,6 +53,9 @@ type Client struct {
 	// to an explicit recovery of the client.
 	// This value can be accessed across two go-routines
 	recoverClients *AtomicBool
+
+	reserveCtxMu  sync.RWMutex
+	reserveCancel context.CancelFunc
 }
 
 func NewClient(proxyID string, serverAddrs []string, connTimeout time.Duration) *Client {
@@ -65,9 +67,9 @@ func NewClient(proxyID string, serverAddrs []string, connTimeout time.Duration) 
 			mu: sync.Mutex{},
 			q:  nil,
 		},
-		doneCh:         make(chan bool),
 		waiting:        make(waitingClients),
 		recoverClients: NewAtomicBool(),
+		reserveCtxMu:   sync.RWMutex{},
 	}
 }
 
@@ -81,21 +83,16 @@ func (c *Client) Open() error {
 
 	c.conn = conn
 	c.jsmClient = v1.NewJobStateMachineClient(conn)
-
 	go func() {
 		for {
-			err := c.GetReservations(c.doneCh)
+			err := c.GetReservations()
 			if err == ErrShutdown {
-				log.Infof("Done signaled leaving reservations loop")
 				return
 			}
-			log.Infof("proxy.client.Open: got error: %v", err)
 			if err != nil {
 				log.Errorf("proxy.client.Open: c.GetReservations: err = %v", err)
-				// ToDo: Consider using a exponential backoff strategy if c.getReservations fails.
-				// Refer: https://github.com/1xyz/coolbeans/issues/26
 				b := c.recoverClients.SetIfFalse()
-				log.Infof("proxy.client.Open: c.GetReservations: recoverClients.SetIfFalse result = %v", b)
+				log.Debugf("proxy.client.Open: c.GetReservations: recoverClients.SetIfFalse result = %v", b)
 			}
 		}
 	}()
@@ -105,8 +102,13 @@ func (c *Client) Open() error {
 
 func (c *Client) Close() error {
 	log.Infof("Client: close, signaling shutdown")
-	c.doneCh <- true
-	close(c.doneCh)
+	c.reserveCtxMu.RLock()
+	if c.reserveCancel != nil {
+		log.Infof("reserveCancel called")
+		c.reserveCancel()
+	}
+	c.reserveCtxMu.RUnlock()
+
 	if c.conn != nil {
 		return c.conn.Close()
 	}
@@ -460,27 +462,30 @@ func toClientIds(s []string) []state.ClientID {
 
 var ErrShutdown = errors.New("Done signaled")
 
-func (c *Client) GetReservations(done <-chan bool) error {
-	ctx := context.Background()
-	ctx.Done()
+func (c *Client) GetReservations() error {
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	c.reserveCtxMu.Lock()
+	c.reserveCancel = cancelFunc
+	c.reserveCtxMu.Unlock()
+
 	stream, err := c.jsmClient.StreamReserveUpdates(ctx,
 		&v1.ReserveUpdateRequest{ProxyId: c.ProxyID})
 	if err != nil {
-		log.Errorf("GetReservations: err %v", err)
+		log.Errorf("GetReservations: StreamReserveUpdates: err %v", err)
 		return err
 	}
 
 	for {
-		select {
-		case <-done:
-			return ErrShutdown
-		default:
-		}
-
 		v1r, err := stream.Recv()
 		if err != nil {
-			log.Errorf("proxy.client.GetReservations: err %v", err)
+			log.Errorf("proxy.client.GetReservations: stream.Recv(): err %v", err)
 			return err
+		}
+
+		select {
+		case <-ctx.Done():
+			return ErrShutdown
+		default:
 		}
 
 		r := state.Reservation{
@@ -604,7 +609,6 @@ func (w waitingClients) Remove(cli state.ClientID) error {
 	if !w.Contains(cli) {
 		return state.ErrEntryMissing
 	}
-
 	delete(w, cli)
 	return nil
 }
