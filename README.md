@@ -70,7 +70,7 @@ Here are a few ways you can contribute:
 
 - Have a feature in mind. Tell us more about by [filing an issue](https://github.com/1xyz/coolbeans/issues/new/choose).
 
-- Want to contribute to code, documentation. Checkout the [contribution guide](./CONTRIBUTING.md). 
+- Want to contribute to code, documentation. Checkout the [contribution guide](./Contributing.md). 
 
 ---
 
