@@ -1,6 +1,7 @@
 [![Build](https://github.com/1xyz/coolbeans/workflows/Build/badge.svg)](https://github.com/1xyz/coolbeans/actions?query=workflow%3ABuild)
 [![Release](https://github.com/1xyz/coolbeans/workflows/Release/badge.svg)](https://github.com/1xyz/coolbeans/actions?query=workflow%3ARelease)
 [![Docker](https://img.shields.io/docker/pulls/1xyz/coolbeans)](https://hub.docker.com/r/1xyz/coolbeans/tags)
+[![Go Report Card](https://goreportcard.com/badge/github.com/1xyz/coolbeans)](https://goreportcard.com/report/github.com/1xyz/coolbeans)
 
 
 
