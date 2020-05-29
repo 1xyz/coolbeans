@@ -60,7 +60,7 @@ Notes:
 
 Setup options
 -------------
-- It it recommended to have at least a cluster-nodes in your RAFT cluster to be resilient to the single node failures. 
+- It it recommended to have a three cluster-nodes in your RAFT cluster to be resilient to  single node failures. 
 
 - Options for setting up beanstalkd-proxy:
     - A single beanstalkd proxy server as a side-car for every machine, or pod, similar to [this](https://cloud.google.com/sql/docs/mysql/sql-proxy). 
