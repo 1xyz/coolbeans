@@ -11,7 +11,7 @@
     - [Releases](#releases)
     - [Getting started](#getting-started)
     - [How to contribute](#how-to-contribute)
-    - [Local Development](doc/Developer.md)
+    - [Local Development](Contributing.md)
 
 <img src="doc/bean_3185124.svg" align=right width=200px />
 
