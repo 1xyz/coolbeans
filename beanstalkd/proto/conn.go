@@ -8,7 +8,7 @@ import (
 	"net"
 )
 
-// Encapsulates the connection (stream) with a client
+// Conn encapsulates the connection (stream) with a client
 type Conn struct {
 	// clientRegistration refers to client's unique registration
 	clientReg *core.ClientReg
@@ -34,6 +34,7 @@ type Conn struct {
 	lastCmd *core.CmdData
 }
 
+// NewConn returns a pointer to a new Conn struct
 func NewConn(conn net.Conn, clientReg *core.ClientReg, cmdProcessor core.CommandProcessor) *Conn {
 	return &Conn{
 		clientReg:    clientReg,
@@ -243,6 +244,7 @@ func (c *Conn) wantCommand() {
 	c.dispatchCommand()
 }
 
+// Tick run the underlying state machine
 func (c *Conn) Tick() {
 	ctxLog := log.WithField("method", "conn.Tick")
 	for c.state != Stopped {

@@ -9,6 +9,7 @@ import (
 	"time"
 )
 
+// CommandProcessor manages command processing for a the beanstalkd service
 type CommandProcessor interface {
 	// Register a new client with this system
 	// Returns an ID and error
@@ -27,6 +28,8 @@ type CommandProcessor interface {
 	MaxJobDataSize() int
 }
 
+// NewCommandProcessor returns an instance of CommandProcessor for the
+// specified job state machine & config.
 func NewCommandProcessor(jsm state.JSM, cfg *Config) CommandProcessor {
 	return &cmdProcessor{
 		newClientReqCh:        make(chan bool),
@@ -71,6 +74,7 @@ type cmdProcessor struct {
 	maxReserveTimeoutSecs int
 }
 
+// Run this command processor
 func (c *cmdProcessor) Run() {
 	for {
 		select {
@@ -110,7 +114,7 @@ func (c *cmdProcessor) Run() {
 	}
 }
 
-// shutdown this cmdProcessor
+// Shutdown this cmdProcessor
 func (c *cmdProcessor) Shutdown() {
 	log.Infof("cmdProcessor.Shutdown: shutdown signalled")
 	c.shutdownCh <- true
@@ -531,7 +535,7 @@ func (c *cmdProcessor) quit(cli *client, req *CmdRequest) *CmdResponse {
 		// we expect that the client to be removed exactly once
 		ctxLog.Panicf("c.cliente.Remove error=%v", err)
 	}
-	for name, _ := range cli.watchingTubes {
+	for name := range cli.watchingTubes {
 		if err := cli.watchingTubes.Remove(name); err != nil {
 			ctxLog.Errorf("cli.watchingTubes.Remove(%s) err=%v", name, err)
 		}
@@ -567,7 +571,7 @@ func (c *cmdProcessor) reserve(cli *client, req *CmdRequest) {
 
 func (c *cmdProcessor) appendReservation(cli *client, reqID string, nowSecs, deadlineAt int64) {
 	watchedTubes := make([]state.TubeName, 0)
-	for t, _ := range cli.watchingTubes {
+	for t := range cli.watchingTubes {
 		watchedTubes = append(watchedTubes, t)
 	}
 
@@ -612,7 +616,7 @@ func logCtx(req *CmdRequest, method string) *log.Entry {
 	return ctxLog
 }
 
-// Encapsulates a Client Registration information
+// ClientReg encapsulates a Client Registration information
 type ClientReg struct {
 	// A unique identifier for this client
 	ID state.ClientID
@@ -628,6 +632,7 @@ func (cr ClientReg) String() string {
 	return fmt.Sprintf("ClienReg ID:%v error:%v", cr.ID, cr.Error)
 }
 
+// CmdRequest represents a command requested by a client.
 type CmdRequest struct {
 	ID       string
 	ClientID state.ClientID
@@ -651,6 +656,7 @@ func (req CmdRequest) String() string {
 		req.ID, req.CmdType, arg, req.ClientID)
 }
 
+// NewCmdRequest constructs a new CmdRequest from the provided information.
 func NewCmdRequest(cmdData *CmdData, clientID state.ClientID) (CmdRequest, error) {
 	cmdRequest := CmdRequest{
 		ID:       uuid.New().URN(),
@@ -691,6 +697,7 @@ func NewCmdRequest(cmdData *CmdData, clientID state.ClientID) (CmdRequest, error
 	return cmdRequest, err
 }
 
+// CmdResponse is the command response for the specific client
 type CmdResponse struct {
 	RequestID string
 	ClientID  state.ClientID
@@ -698,6 +705,7 @@ type CmdResponse struct {
 	HasMore   bool
 }
 
+// NewCmdResponseFromReq creates a new response.
 func NewCmdResponseFromReq(req *CmdRequest) *CmdResponse {
 	return &CmdResponse{
 		RequestID: req.ID,

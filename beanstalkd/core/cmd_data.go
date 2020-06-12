@@ -8,6 +8,7 @@ import (
 	"strconv"
 )
 
+// CmdData encapsulates a parsed command.
 type CmdData struct {
 	CmdType  CmdType
 	Args     string
@@ -124,6 +125,7 @@ type putArg struct {
 	data  []byte
 }
 
+// NewPutArg constructs a pointer to a new PutArg struct.
 func NewPutArg(data *CmdData) (*putArg, error) {
 	ctxLog := log.WithFields(log.Fields{"method": "NewPutArg"})
 	tm, ok := matchNamedGroups(data.Args, putRe)
@@ -170,6 +172,7 @@ type tubeArg struct {
 	tubeName state.TubeName
 }
 
+// NewTubeArg constructs a pointer to a new tubeArg struct.
 func NewTubeArg(data *CmdData) (*tubeArg, error) {
 	ctxLog := log.WithFields(log.Fields{"method": "NewTubeArg"})
 	tm, ok := matchNamedGroups(data.Args, tubeArgRe)
@@ -188,6 +191,7 @@ type idArg struct {
 	id state.JobID
 }
 
+// NewIDArg constructs a pointer to a new idArg struct.
 func NewIDArg(data *CmdData) (*idArg, error) {
 	ctxLog := log.WithFields(log.Fields{"method": "NewIDArg"})
 	tm, ok := matchNamedGroups(data.Args, idArgRe)
@@ -211,6 +215,7 @@ type reserveWithTimeoutArg struct {
 	timeoutSeconds int
 }
 
+// NewReserveWithTimeoutArg constructs a pointer to a new reserveWithTimeoutArg struct.
 func NewReserveWithTimeoutArg(data *CmdData) (*reserveWithTimeoutArg, error) {
 	ctxLog := log.WithFields(log.Fields{"method": "NewReserveWithTimeoutArg"})
 	tm, ok := matchNamedGroups(data.Args, reserveWithTimeoutRe)
@@ -236,6 +241,7 @@ type buryArg struct {
 	pri uint32
 }
 
+// NewBuryArg constructs a pointer to a new buryArg struct.
 func NewBuryArg(data *CmdData) (*buryArg, error) {
 	tm, ok := matchNamedGroups(data.Args, buryArgRe)
 	if !ok {
@@ -265,6 +271,7 @@ type kickNArg struct {
 	bound int
 }
 
+// NewKickNArg constructs a pointer to a new kickNArg struct.
 func NewKickNArg(data *CmdData) (*kickNArg, error) {
 	tm, ok := matchNamedGroups(data.Args, kickNArgRe)
 	if !ok {
@@ -288,6 +295,7 @@ type releaseArg struct {
 	delay int64
 }
 
+// NewReleaseArg constructs a pointer to a new releaseArg struct.
 func NewReleaseArg(data *CmdData) (*releaseArg, error) {
 	tm, ok := matchNamedGroups(data.Args, releaseArgRe)
 	if !ok {

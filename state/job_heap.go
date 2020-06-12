@@ -42,9 +42,8 @@ type jobHeap struct {
 func (jh *jobHeap) Peek() *JobEntry {
 	if jh.Len() == 0 {
 		return nil
-	} else {
-		return jh.entries[0]
 	}
+	return jh.entries[0]
 }
 
 func (jh *jobHeap) Enqueue(j Job) *JobEntry {
@@ -132,6 +131,7 @@ func (jh *jobHeap) JobCountByTube(tubeName TubeName) uint64 {
 // Priority. Lower priority values takes a higher precedence.
 type PriorityJobs JobHeap
 
+// NewPriorityJobs returns a new instance of PriorityJobs
 func NewPriorityJobs() PriorityJobs {
 	pq := jobHeap{
 		entries: make([]*JobEntry, 0),
@@ -151,6 +151,7 @@ func NewPriorityJobs() PriorityJobs {
 // Lower (earlier) ReadyAt takes a higher precedence.
 type DelayedJobs JobHeap
 
+// NewDelayedJobs returns a new instance of DelayedJobs
 func NewDelayedJobs() DelayedJobs {
 	pq := jobHeap{
 		entries: make([]*JobEntry, 0),
@@ -169,6 +170,7 @@ func NewDelayedJobs() DelayedJobs {
 // field. Lower (earlier) ExpiresAt take a higher precedence
 type ReservedJobs JobHeap
 
+// NewReservedJobs returns a new instance of ReservedJobs
 func NewReservedJobs() ReservedJobs {
 	pq := jobHeap{
 		entries: make([]*JobEntry, 0),
@@ -188,6 +190,7 @@ func NewReservedJobs() ReservedJobs {
 // If two jobs have the same BuriedAt value, the lower job id gets precedence
 type BuriedJobs JobHeap
 
+// NewBuriedJobs returns a new instance of BuriedJobs.
 func NewBuriedJobs() ReservedJobs {
 	pq := jobHeap{
 		entries: make([]*JobEntry, 0),
