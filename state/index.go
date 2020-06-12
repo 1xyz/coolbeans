@@ -248,7 +248,7 @@ func (ti tubeIndex) RemoveFromWaitQ(tubeName TubeName, cli *ClientResvEntry) err
 
 func (t tubeIndex) GetTubeNames() []TubeName {
 	result := make([]TubeName, 0)
-	for n, _ := range t {
+	for n := range t {
 		result = append(result, n)
 	}
 	return result

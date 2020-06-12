@@ -65,7 +65,7 @@ clean:
 
 .PHONY: fmt
 fmt:
-	$(GOFMT) -l -w $(SRC)
+	$(GOFMT) -s -l -w $(SRC)
 
 
 # tools deps to generate code (stringer...)
