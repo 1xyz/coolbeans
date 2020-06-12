@@ -66,7 +66,7 @@ func TestRestoreSnapshotTo(t *testing.T) {
 		t.Fatalf("jsmSnap.SnapshotJobs err=%v", err)
 	} else {
 		count := 0
-		for _ = range jobCh {
+		for range jobCh {
 			count++
 		}
 		assert.Equalf(t, len(jobIDs), count, "expect job count to be %v", len(jobIDs))
@@ -77,7 +77,7 @@ func TestRestoreSnapshotTo(t *testing.T) {
 		t.Fatalf("jsmSnap.SnapshotClients err=%v", err)
 	} else {
 		count := 0
-		for _ = range cliCh {
+		for range cliCh {
 			count++
 		}
 		assert.Equalf(t, len(resv), count, "expect resv count to be %v", len(resv))

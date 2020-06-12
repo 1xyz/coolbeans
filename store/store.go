@@ -1,7 +1,4 @@
-/*
- * Package store provides an implementation for a accessing a Raft
- * backed job state machine store
- */
+// Package store provides an implementation for a accessing a Raft backed job state machine store
 package store
 
 import (
@@ -25,7 +22,7 @@ var (
 	// the raft configuration.
 	ErrRaftConfig = errors.New("raft configuration error")
 
-	// ErrNodeNotLeader is returned, when the request requires the current
+	// ErrNotRaftLeader is returned, when the request requires the current
 	// node to be a leader to execute, but is a not a raft leader.
 	ErrNotRaftLeader = errors.New("node is not a raft leader")
 
@@ -33,6 +30,7 @@ var (
 	ErrNodeNotFound = errors.New("node is not found in raft configuration")
 )
 
+// Config encapsulates the store startup configuration.
 type Config struct {
 	// retainSnapshotCount indicates the max, number of snapshots to retain
 	RetainSnasphotCount int
@@ -81,6 +79,7 @@ type Config struct {
 	LocalNodeID string
 }
 
+// Store represents the job state machine which is persisted/replicated via RAFT.
 type Store struct {
 	jsm       state.JSM
 	c         *Config
@@ -88,6 +87,7 @@ type Store struct {
 	transport *raft.NetworkTransport
 }
 
+// NewStore returns a pointer to a new Store.
 func NewStore(c *Config) (*Store, error) {
 	jsm, err := state.NewJSM()
 	if err != nil {
@@ -175,6 +175,7 @@ func (s *Store) Open() error {
 	return nil
 }
 
+// Close disconnects this store from its peers.
 func (s *Store) Close() error {
 	log.Infof("store.Close: calling s.raft.Shutdown")
 	f := s.raft.Shutdown()
@@ -251,14 +252,17 @@ func (s *Store) Join(nodeID, addr string) error {
 	return nil
 }
 
+// IsLeader returns true if this instance is the leader.
 func (s *Store) IsLeader() bool {
 	return s.raft.State() == raft.Leader
 }
 
+// Ready returns true if this instance can take requests.
 func (s *Store) Ready() bool {
 	return s.IsLeader()
 }
 
+// TransferLeadership transfers leadership if this instance is a leader to another peer.
 func (s *Store) TransferLeadership() error {
 	if !s.IsLeader() {
 		log.Infof("ReleaseLeadership: current node is not leader")
@@ -269,7 +273,7 @@ func (s *Store) TransferLeadership() error {
 	return f.Error()
 }
 
-// Leave, allows a node (specified by nodeID_ to leave the cluster.
+// Leave allows a node (specified by nodeID_ to leave the cluster.
 //
 // It is required that the node that this is called into is a leader node.
 func (s *Store) Leave(nodeID string) error {
@@ -304,6 +308,7 @@ func (s *Store) Leave(nodeID string) error {
 	return fmt.Errorf("nodeId=%v, err = %w", serverID, ErrNodeNotFound)
 }
 
+// GetRaftConfiguration returns the underlying raft library's initialized configuration.
 func (s *Store) GetRaftConfiguration() (*raft.Configuration, error) {
 	f := s.raft.GetConfiguration()
 	if err := f.Error(); err != nil {
@@ -315,6 +320,8 @@ func (s *Store) GetRaftConfiguration() (*raft.Configuration, error) {
 	return &cfg, nil
 }
 
+// Snapshot takes a user snaphot. (Note: this method is incomplete and its intention is
+// to return a byte stream.
 func (s *Store) Snapshot() error {
 	logc := log.WithField("method", "Snapshot")
 
@@ -329,6 +336,7 @@ func (s *Store) Snapshot() error {
 
 // //////////////////////////////////////////////////////////////////////
 
+// ApplyOp apply the specific function to the state machine.
 func (s *Store) ApplyOp(req *v1.ApplyOpRequest) *v1.ApplyOpResponse {
 	logc := log.WithField("method", "ApplyOp")
 
@@ -385,6 +393,7 @@ func (s *Store) ApplyOp(req *v1.ApplyOpRequest) *v1.ApplyOpResponse {
 	return &resp
 }
 
+// NowSeconds returns the current clock (useful for leader)
 func (s *Store) NowSeconds() int64 {
 	return time.Now().UTC().Unix()
 }
@@ -896,6 +905,7 @@ func (f *fsm) ApplyCheckState(nowSecs int64, req *v1.CheckClientStateRequest) (*
 	}, nil
 }
 
+// ToStrings converts the clientIDs to string slice
 func ToStrings(clientIds []state.ClientID) ([]string, error) {
 	s := make([]string, 0)
 	for _, c := range clientIds {

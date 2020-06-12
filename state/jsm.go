@@ -722,7 +722,7 @@ func (jsm *localJSM) tickDelayJobs(now int64) {
 	logc := log.WithField("method", "cmdProcessor.tickDelayJobs")
 	var nextDelayedTickAt int64 = maxTime
 	count := 0
-	for t, _ := range jsm.tubes {
+	for t := range jsm.tubes {
 		for {
 			// Query the state machine for the next delayed job
 			job, err := jsm.PeekDelayedJob(t)
@@ -763,7 +763,7 @@ func (jsm *localJSM) tickDelayJobs(now int64) {
 // tickReadyJobs - transition READY jobs to RESERVED, by finding a matching client
 func (jsm *localJSM) tickReadyJobs(nowSecs int64) ([]*Reservation, error) {
 	result := make([]*Reservation, 0)
-	for t, _ := range jsm.tubes {
+	for t := range jsm.tubes {
 		for {
 			r, err := jsm.tryReserveJob(nowSecs, t, nil)
 			if err == ErrNoReservationFound {

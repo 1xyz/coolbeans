@@ -5,17 +5,19 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// IndexEntry is an entry within the job Index
 type IndexEntry struct {
 	job   Job
 	entry *JobEntry
 }
 
-// An index of indexEntry indexed by a job ID
+// JobIndex is an index of indexEntry indexed by a job ID
 type JobIndex struct {
 	m        map[JobID]*IndexEntry
 	maxJobID JobID
 }
 
+// NewJobIndex returns a  pointer to a new JobIndex.
 func NewJobIndex() *JobIndex {
 	return &JobIndex{
 		m:        map[JobID]*IndexEntry{},
@@ -23,16 +25,18 @@ func NewJobIndex() *JobIndex {
 	}
 }
 
-// Return the maximum assigned JobID
+// NextJobID returns the maximum assigned JobID
 func (idx *JobIndex) NextJobID() JobID {
 	idx.maxJobID = idx.maxJobID + 1
 	return idx.maxJobID
 }
 
+// Len returns the number of jobs in this index
 func (idx *JobIndex) Len() int {
 	return len(idx.m)
 }
 
+// Add a job to the index
 func (idx *JobIndex) Add(job Job) (*IndexEntry, error) {
 	if _, ok := idx.m[job.ID()]; ok {
 		return nil, fmt.Errorf("job with id=%v exists %w", job.ID(), ErrEntryExists)
@@ -46,6 +50,7 @@ func (idx *JobIndex) Add(job Job) (*IndexEntry, error) {
 	return &e, nil
 }
 
+// Get returns the job specified by the jobID
 func (idx *JobIndex) Get(jobID JobID) (*IndexEntry, error) {
 	entry, ok := idx.m[jobID]
 	if !ok {
@@ -54,6 +59,7 @@ func (idx *JobIndex) Get(jobID JobID) (*IndexEntry, error) {
 	return entry, nil
 }
 
+// Remove deletes the job from the index
 func (idx *JobIndex) Remove(jobID JobID) (*IndexEntry, error) {
 	entry, ok := idx.m[jobID]
 	if !ok {
@@ -64,7 +70,7 @@ func (idx *JobIndex) Remove(jobID JobID) (*IndexEntry, error) {
 	return entry, nil
 }
 
-// Return a read-only channel of jobs
+// Jobs returns a read-only channel of jobs
 func (idx *JobIndex) Jobs() <-chan Job {
 	entriesCh := make(chan Job)
 	go func(ch chan<- Job) {
@@ -246,9 +252,9 @@ func (ti tubeIndex) RemoveFromWaitQ(tubeName TubeName, cli *ClientResvEntry) err
 	}
 }
 
-func (t tubeIndex) GetTubeNames() []TubeName {
+func (ti tubeIndex) GetTubeNames() []TubeName {
 	result := make([]TubeName, 0)
-	for n, _ := range t {
+	for n := range ti {
 		result = append(result, n)
 	}
 	return result

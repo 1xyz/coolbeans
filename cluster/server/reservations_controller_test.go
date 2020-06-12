@@ -146,7 +146,7 @@ func runtestControllerWithResponses(t *testing.T, doneCh chan<- bool, proxyID st
 
 	resp := v1.TickResponse{
 		ProxyReservations: map[string]*v1.Reservations{
-			proxyID: &v1.Reservations{Entries: resvn},
+			proxyID: {Entries: resvn},
 		},
 	}
 

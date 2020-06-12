@@ -622,7 +622,7 @@ func (w waitingClients) Remove(cli state.ClientID) error {
 
 func (w waitingClients) asSlice() []state.ClientID {
 	result := make([]state.ClientID, 0)
-	for k, _ := range w {
+	for k := range w {
 		result = append(result, k)
 	}
 	return result
