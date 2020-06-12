@@ -54,6 +54,7 @@ See 'coolbeans <command> --help' for more information on a specific command.
 	log.Infof("done")
 }
 
+// RunCommand runs a specific command and the provided arguments
 func RunCommand(c string, args []string, version string) {
 	argv := append([]string{c}, args...)
 	switch c {

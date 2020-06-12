@@ -35,6 +35,7 @@ func waitForShutdown(tcpSrv *proto.TcpServer) {
 	tcpSrv.Shutdown()
 }
 
+// RunBeanstalkd runs the beanstalkd TCP proxy server with provided config
 func RunBeanstalkd(c *core.Config) error {
 	spew.Dump(c)
 	tcpSrv := runTCPServer(c)
