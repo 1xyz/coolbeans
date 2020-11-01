@@ -7,7 +7,11 @@ Example (download and unzip for Darwin (macOS)):
 
     wget https://github.com/1xyz/coolbeans/releases/download/v0.1.10/coolbeans-darwin-amd64-v0.1.10.zip
 
-    tar xvf coolbeans-darwin-amd64-v0.1.10.zip -z
+    unzip coolbeans-darwin-amd64-v0.1.11.zip
+    Archive:  coolbeans-darwin-amd64-v0.1.11.zip
+    inflating: README.md
+    inflating: LICENSE.txt
+    inflating: coolbeans
 
 
 Setup up a single node cluster
