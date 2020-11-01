@@ -46,7 +46,7 @@ func NewJSM(upstreamAddrs string, connTimeout time.Duration) state.JSM {
 	if err := nc.Open(); err != nil {
 		log.Panicf("NewJSM: proxyClient.Open(..). err=%v", err)
 	}
-
+	log.Infof("NewJSM: proxy %s connected to %v", nc.ProxyID, nc.ServerAddrs)
 	return nc
 }
 
