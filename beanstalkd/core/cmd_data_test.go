@@ -93,6 +93,12 @@ func TestTubeArg(t *testing.T) {
 			"tube cannot have spaces"},
 		{strN('a', 201), nil, ErrBadFormat,
 			"tube name cannot exceed 200 bytes"},
+		{"-abc", nil, ErrBadFormat,
+			"tube cannot start with '-'"},
+		{"asd-AAZ213;$_/.(+)", &tubeArg{tubeName: "asd-AAZ213;$_/.(+)"}, nil,
+			"expect valid tubename"},
+		{"x", &tubeArg{tubeName: "x"}, nil,
+			"expect valid tubename"},
 	}
 
 	for _, e := range entries {
