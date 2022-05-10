@@ -11,7 +11,7 @@ require (
 	github.com/google/uuid v1.1.1
 	github.com/hashicorp/raft v1.1.2
 	github.com/hashicorp/raft-boltdb v0.0.0-20191021154308-4207f1bf0617
-	github.com/mattn/goreman v0.3.5 // indirect
+	github.com/mattn/goreman v0.3.12 // indirect
 	github.com/maxbrunsfeld/counterfeiter/v6 v6.2.3 // indirect
 	github.com/ory/go-acc v0.2.1
 	github.com/pkg/errors v0.8.1
@@ -20,7 +20,6 @@ require (
 	github.com/smartystreets/goconvey v1.6.4
 	github.com/stretchr/testify v1.5.1
 	golang.org/x/net v0.0.0-20200324143707-d3edc9973b7e
-	golang.org/x/sys v0.0.0-20200409092240-59c9f1ba88fa // indirect
 	golang.org/x/tools v0.0.0-20200413161937-250b2131eb8b
 	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013 // indirect
 	google.golang.org/grpc v1.28.1
