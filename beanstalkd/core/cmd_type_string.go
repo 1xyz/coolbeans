@@ -15,30 +15,31 @@ func _() {
 	_ = x[Kick-4]
 	_ = x[KickJob-5]
 	_ = x[ListTubes-6]
-	_ = x[ListTubeUser-7]
-	_ = x[PauseTube-8]
-	_ = x[Peek-9]
-	_ = x[PeekBuried-10]
-	_ = x[PeekDelayed-11]
-	_ = x[PeekReady-12]
-	_ = x[Put-13]
-	_ = x[Quit-14]
-	_ = x[Release-15]
-	_ = x[Reserve-16]
-	_ = x[ReserveJob-17]
-	_ = x[ReserveWithTimeout-18]
-	_ = x[Stats-19]
-	_ = x[StatsJob-20]
-	_ = x[StatsTube-21]
-	_ = x[Touch-22]
-	_ = x[Use-23]
-	_ = x[Watch-24]
-	_ = x[Max-25]
+	_ = x[ListTubesWatched-7]
+	_ = x[ListTubeUsed-8]
+	_ = x[PauseTube-9]
+	_ = x[Peek-10]
+	_ = x[PeekBuried-11]
+	_ = x[PeekDelayed-12]
+	_ = x[PeekReady-13]
+	_ = x[Put-14]
+	_ = x[Quit-15]
+	_ = x[Release-16]
+	_ = x[Reserve-17]
+	_ = x[ReserveJob-18]
+	_ = x[ReserveWithTimeout-19]
+	_ = x[Stats-20]
+	_ = x[StatsJob-21]
+	_ = x[StatsTube-22]
+	_ = x[Touch-23]
+	_ = x[Use-24]
+	_ = x[Watch-25]
+	_ = x[Max-26]
 }
 
-const _CmdType_name = "UnknownBuryDeleteIgnoreKickKickJobListTubesListTubeUserPauseTubePeekPeekBuriedPeekDelayedPeekReadyPutQuitReleaseReserveReserveJobReserveWithTimeoutStatsStatsJobStatsTubeTouchUseWatchMax"
+const _CmdType_name = "UnknownBuryDeleteIgnoreKickKickJobListTubesListTubesWatchedListTubeUsedPauseTubePeekPeekBuriedPeekDelayedPeekReadyPutQuitReleaseReserveReserveJobReserveWithTimeoutStatsStatsJobStatsTubeTouchUseWatchMax"
 
-var _CmdType_index = [...]uint8{0, 7, 11, 17, 23, 27, 34, 43, 55, 64, 68, 78, 89, 98, 101, 105, 112, 119, 129, 147, 152, 160, 169, 174, 177, 182, 185}
+var _CmdType_index = [...]uint8{0, 7, 11, 17, 23, 27, 34, 43, 59, 71, 80, 84, 94, 105, 114, 117, 121, 128, 135, 145, 163, 168, 176, 185, 190, 193, 198, 201}
 
 func (i CmdType) String() string {
 	if i < 0 || i >= CmdType(len(_CmdType_index)-1) {
