@@ -18,7 +18,8 @@ const (
 	Kick
 	KickJob
 	ListTubes
-	ListTubeUser
+	ListTubesWatched
+	ListTubeUsed
 	PauseTube
 	Peek
 	PeekBuried
