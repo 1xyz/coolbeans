@@ -52,8 +52,8 @@ services:
       - cb_network
     command: ["/root/coolbeans", 
       "beanstalkd",  
-      "-p", "11300", 
-      "-j", "bean0:11000,bean1:12000,bean2:13000"]
+      "--listen-port=11300",
+      "--upstream-addrs", "bean0:11000,bean1:12000,bean2:13000"]
 
 networks:
   cb_network:
