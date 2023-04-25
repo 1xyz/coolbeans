@@ -172,6 +172,10 @@ func (c *cmdProcessor) processRequest(req *CmdRequest) {
 		resp = c.kick(cli, req)
 	case ListTubes:
 		resp = c.listTubes(cli, req)
+	case ListTubesWatched:
+		resp = c.listTubesWatched(cli, req)
+	case ListTubeUsed:
+		resp = c.listTubeUsed(cli, req)
 	case Peek:
 		resp = c.peek(cli, req)
 	case PeekBuried:
@@ -354,6 +358,32 @@ func (c *cmdProcessor) listTubes(cli *client, req *CmdRequest) *CmdResponse {
 
 	sendYamlResponse(b, req, cli)
 	return nil
+}
+
+func (c *cmdProcessor) listTubesWatched(cli *client, req *CmdRequest) *CmdResponse {
+	resp := NewCmdResponseFromReq(req)
+
+	watchedTubes := make([]state.TubeName, 0)
+	for t := range cli.watchingTubes {
+		watchedTubes = append(watchedTubes, t)
+	}
+
+	b, err := yaml.Marshal(watchedTubes)
+	if err != nil {
+		log.Errorf("cmdProcessor.listTubesWatched: yaml.Marshal err = %v", err)
+		resp.setResponse(MsgInternalError)
+		return resp
+	}
+
+	sendYamlResponse(b, req, cli)
+	return nil
+}
+
+func (c *cmdProcessor) listTubeUsed(cli *client, req *CmdRequest) *CmdResponse {
+	resp := NewCmdResponseFromReq(req)
+
+	resp.setResponse(fmt.Sprintf("USING %s", cli.useTube))
+	return resp
 }
 
 func (c *cmdProcessor) peek(cli *client, req *CmdRequest) *CmdResponse {
@@ -689,7 +719,7 @@ func NewCmdRequest(cmdData *CmdData, clientID state.ClientID) (CmdRequest, error
 		cmdRequest.cmd, err = NewIDArg(cmdData)
 	case StatsTube:
 		cmdRequest.cmd, err = NewTubeArg(cmdData)
-	case ListTubes, PeekReady, PeekDelayed, PeekBuried, Quit, Reserve, Stats:
+	case ListTubes, ListTubesWatched, ListTubeUsed, PeekReady, PeekDelayed, PeekBuried, Quit, Reserve, Stats:
 	default:
 		err = ErrCmdNotFound
 	}

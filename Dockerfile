@@ -1,4 +1,4 @@
-FROM golang:1.13.8-alpine3.11 AS builder
+FROM golang:1.16.3-alpine AS builder
 
 RUN apk update && apk add make git build-base curl protobuf && \
      rm -rf /var/cache/apk/*
