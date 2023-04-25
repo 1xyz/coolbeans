@@ -96,7 +96,7 @@ var (
 	putRe = regexp.MustCompile(`^(?P<pri>\d+) (?P<delay>\d+) (?P<ttr>\d+) (?P<bytes>\d+)$`)
 
 	// tube arg regex -- watch <tube> | ignore <tube> | use <tube>
-	tubeArgRe = regexp.MustCompile(`(?P<tube>^\w{1,200}$)`)
+	tubeArgRe = regexp.MustCompile(`(?P<tube>^[a-zA-Z0-9+\/;.$_()][a-zA-Z0-9\-+\/;.$_()]{0,199}$)`)
 
 	// id arg regex --
 	// delete <id>
